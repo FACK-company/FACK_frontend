@@ -1,0 +1,37 @@
+import type { Config } from 'typescript';
+
+const config: Config = {
+  compilerOptions: {
+    target: 'ES2020',
+    lib: ['ES2020', 'dom', 'dom.iterable'],
+    jsx: 'react-jsx',
+    module: 'esnext',
+    moduleResolution: 'bundler',
+    resolveJsonModule: true,
+    allowJs: true,
+    strict: true,
+    esModuleInterop: true,
+    skipLibCheck: true,
+    forceConsistentCasingInFileNames: true,
+    baseUrl: '.',
+    paths: {
+      '@/*': ['./src/*'],
+      '@/app/*': ['./src/app/*'],
+      '@/components/*': ['./src/components/*'],
+      '@/services/*': ['./src/services/*'],
+      '@/hooks/*': ['./src/hooks/*'],
+      '@/types/*': ['./src/types/*'],
+      '@/utils/*': ['./src/utils/*'],
+      '@/styles/*': ['./src/styles/*'],
+    },
+    plugins: [
+      {
+        name: 'next',
+      },
+    ],
+  },
+  include: ['next-env.d.ts', '**/*.ts', '**/*.tsx', '.next/types/**/*.ts'],
+  exclude: ['node_modules'],
+};
+
+export default config;
