@@ -1,4 +1,4 @@
-# Build configuration for Next.js
+// Build configuration for Next.js
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   // Output mode for Docker compatibility
