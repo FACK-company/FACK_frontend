@@ -1,1 +1,41 @@
-/* Global styles and Tailwind CSS imports */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root{
+  --navy:#00196E;
+  --yellow:#FFAD1D;
+  --lightblue:#CEEDF6;
+  --gray:#E1E1DE;
+  --white:#FFFFFF;
+}
+
+*,
+*::before,
+*::after{
+  box-sizing:border-box;
+}
+
+html,body{
+  height:100%;
+}
+
+body{
+  margin:0;
+  font-family:ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
+  color:#0b1220;
+  background:#fff;
+  -webkit-font-smoothing:antialiased;
+  text-rendering:optimizeLegibility;
+}
+
+img,svg,video,canvas{
+  display:block;
+  max-width:100%;
+  height:auto;
+}
+
+a{
+  color:inherit;
+  text-decoration:none;
+}
