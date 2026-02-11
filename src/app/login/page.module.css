@@ -1,0 +1,40 @@
+.pageOverlay{
+  min-height:100vh;
+  display:flex;
+  flex-direction:column;
+  background-image:url("/img/background.png");
+  background-size:cover;
+  background-position:center;
+  background-repeat:no-repeat;
+}
+
+.loginCard{
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  max-width:920px;
+  min-height:480px;
+}
+
+.signInBtn{
+  height:56px;
+  border-radius:16px;
+  width:100%;
+  min-width:0;
+  font-size:15px;
+}
+
+.loginRight{
+  width:100%;
+  max-width:700px;
+  padding:52px 72px;
+}
+
+.loginTitle{
+  font-size:calc(24px + 0.6rem);
+}
+
+.loginRight :global(.field){
+  height:56px;
+  font-size:14px;
+}

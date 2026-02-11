@@ -1,0 +1,322 @@
+.pageBg{
+  background:
+    radial-gradient(700px 420px at 18% 20%, rgba(206,237,246,0.9), transparent 60%),
+    radial-gradient(700px 420px at 86% 26%, rgba(255,173,29,0.18), transparent 60%),
+    radial-gradient(700px 420px at 80% 86%, rgba(225,225,222,0.85), transparent 60%),
+    #fff;
+}
+
+.layout{
+  display:grid;
+  grid-template-columns: minmax(0, 0.95fr) minmax(0, 1.25fr);
+  gap:16px;
+  align-items:start;
+}
+
+.studentPanel,
+.examPanel{
+  min-width:0;
+  background:#fff;
+  border:1px solid rgba(0,25,110,.12);
+  border-radius:18px;
+  padding:16px;
+  box-shadow:0 12px 26px rgba(0,0,0,.06);
+}
+
+.sectionTitle{
+  font-size:18px;
+  font-weight:800;
+  margin-bottom:10px;
+}
+
+.examHead{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  margin-bottom:10px;
+}
+
+.createExamBtn{
+  height:40px;
+  min-width:140px;
+  border-radius:10px;
+  border:1px solid rgba(0,25,110,.25);
+  background:#fff;
+  color:var(--navy);
+  font-weight:700;
+  cursor:pointer;
+}
+
+.addRow{
+  display:grid;
+  grid-template-columns: repeat(8, minmax(0, 1fr));
+  gap:10px;
+  margin-bottom:10px;
+}
+
+.addRow .textInput:nth-of-type(1){
+  grid-column: span 2;
+}
+
+.addRow .textInput:nth-of-type(2){
+  grid-column: span 2;
+}
+
+.addRow .textInput:nth-of-type(3){
+  grid-column: span 2;
+}
+
+.textInput{
+  height:44px;
+  border-radius:10px;
+  border:1px solid rgba(0,25,110,.2);
+  padding:0 12px;
+  font:inherit;
+  color:var(--navy);
+}
+
+.addBtn{
+  grid-column: span 2;
+  width:100%;
+  min-width:0;
+}
+
+.csvRow{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  flex-wrap:wrap;
+  margin-bottom:10px;
+}
+
+.csvLabel{
+  height:40px;
+  min-width:140px;
+  border-radius:10px;
+  border:1px solid rgba(0,25,110,.25);
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  padding:0 12px;
+  font-weight:700;
+  color:var(--navy);
+  cursor:pointer;
+  background:#fff;
+}
+
+.fileInput{
+  display:none;
+}
+
+.studentTable{
+  border:1px solid rgba(0,25,110,.12);
+  border-radius:12px;
+  overflow:hidden;
+}
+
+.studentHead,
+.studentRow{
+  display:grid;
+  grid-template-columns: 1fr 1fr 1.8fr;
+  gap:10px;
+  align-items:center;
+  padding:12px 14px;
+}
+
+.studentHead{
+  background:rgba(0,25,110,.03);
+  font-size:12px;
+  font-weight:800;
+  text-transform:uppercase;
+  letter-spacing:.06em;
+  color:rgba(0,25,110,.65);
+}
+
+.studentRow{
+  border-top:1px solid rgba(0,25,110,.08);
+  font-weight:700;
+}
+
+.emailCell{
+  overflow-wrap:anywhere;
+}
+
+.courseTableHead,
+.courseTableRow{
+  grid-template-columns: minmax(160px, 1.15fr) minmax(100px, 0.7fr) minmax(140px, 0.8fr) minmax(150px, 0.9fr);
+}
+
+.courseTableRow{
+  min-height:100px;
+}
+
+.courseTableRow > div{
+  display:flex;
+  align-items:center;
+}
+
+.courseTableRow > a{
+  justify-self:end;
+  width:100%;
+  max-width:170px;
+}
+
+.viewExamBtn{
+  width:100%;
+  min-width:0;
+}
+
+.errorText{
+  margin-bottom:10px;
+  color:#b91c1c;
+  font-weight:700;
+}
+
+.empty{
+  padding:12px 14px;
+  color:rgba(0,25,110,.65);
+  font-weight:700;
+}
+
+.modalCard{
+  width:min(760px, 95%);
+}
+
+.modalTitle{
+  margin:0 0 12px;
+  font-size:22px;
+  font-weight:800;
+  color:var(--navy);
+}
+
+.formGrid{
+  display:grid;
+  grid-template-columns: 1fr 1fr;
+  gap:12px;
+}
+
+.field{
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+  font-weight:700;
+  color:rgba(0,25,110,.85);
+}
+
+.field input,
+.field textarea{
+  width:100%;
+  border:1px solid rgba(0,25,110,.2);
+  border-radius:10px;
+  padding:10px 12px;
+  font:inherit;
+  color:var(--navy);
+}
+
+.field input{
+  height:44px;
+}
+
+.field input[type="file"]{
+  padding:8px 10px;
+}
+
+.field textarea{
+  min-height:92px;
+  resize:vertical;
+}
+
+.spanAll{
+  grid-column: span 2;
+}
+
+.modalActions{
+  margin-top:14px;
+  display:flex;
+  justify-content:flex-end;
+  gap:10px;
+}
+
+.ghostBtn{
+  height:52px;
+  min-width:220px;
+  border-radius:12px;
+  border:1px solid rgba(0,25,110,.25);
+  background:#fff;
+  color:var(--navy);
+  font-weight:700;
+  font-size:15px;
+  cursor:pointer;
+}
+
+.createBtn{
+  min-width:220px;
+  font-size:15px;
+}
+
+@media (max-width:1100px){
+  .layout{
+    grid-template-columns:1fr;
+  }
+
+  .addRow{
+    grid-template-columns:1fr 1fr;
+  }
+
+  .addRow .textInput:nth-of-type(1),
+  .addRow .textInput:nth-of-type(2),
+  .addRow .textInput:nth-of-type(3){
+    grid-column: span 1;
+  }
+
+  .addBtn{
+    grid-column: span 2;
+  }
+
+  .courseTableHead,
+  .courseTableRow{
+    grid-template-columns: 1.2fr 0.8fr 0.9fr 180px;
+  }
+
+  .viewExamBtn{
+    width:170px;
+    min-width:170px;
+  }
+}
+
+@media (max-width:900px){
+  .csvRow{
+    flex-direction:column;
+    align-items:flex-start;
+  }
+
+  .studentHead,
+  .studentRow{
+    grid-template-columns:1fr;
+    gap:6px;
+  }
+
+  .courseTableHead,
+  .courseTableRow{
+    grid-template-columns: 1fr;
+    gap:8px;
+  }
+
+  .courseTableRow{
+    min-height:unset;
+  }
+
+  .courseTableRow > a{
+    justify-self:start;
+  }
+
+  .formGrid{
+    grid-template-columns:1fr;
+  }
+
+  .spanAll{
+    grid-column: span 1;
+  }
+}
