@@ -57,7 +57,7 @@ export default function LoginPage() {
         return;
       }
 
-      const target = isStudentEmail(value) ? "/student-home" : "/prof/home";
+      const target = isStudentEmail(value) ? "/student/home" : "/prof/home";
       router.push(target);
     } catch {
       setFormError("Unable to sign in right now. Please try again.");

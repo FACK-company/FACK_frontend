@@ -1,0 +1,122 @@
+.pageBg{
+  background:
+    radial-gradient(700px 420px at 18% 20%, rgba(206,237,246,0.9), transparent 60%),
+    radial-gradient(700px 420px at 86% 26%, rgba(255,173,29,0.18), transparent 60%),
+    radial-gradient(700px 420px at 80% 86%, rgba(225,225,222,0.85), transparent 60%),
+    #fff;
+}
+
+.pageTitle{
+  font-size:34px;
+  font-weight:800;
+  margin-bottom:14px;
+  line-height:1.15;
+}
+
+.list{
+  display:grid;
+  gap:14px;
+}
+
+.examCard{
+  background:#fff;
+  border:1px solid rgba(0,25,110,.12);
+  border-radius:18px;
+  padding:18px 20px;
+  box-shadow:0 12px 26px rgba(0,0,0,.06);
+}
+
+.examRow{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:12px;
+  margin-bottom:14px;
+}
+
+.label{
+  font-size:12px;
+  font-weight:700;
+  color:rgba(0,25,110,.6);
+  text-transform:uppercase;
+  letter-spacing:.06em;
+  margin-bottom:4px;
+}
+
+.value{
+  font-size:18px;
+  font-weight:700;
+}
+
+.examGrid{
+  display:grid;
+  grid-template-columns: minmax(0, .8fr) minmax(0, 1.2fr) auto;
+  gap:14px;
+  align-items:end;
+}
+
+.cta{
+  justify-self:end;
+}
+
+.enterBtn{
+  min-width:160px;
+}
+
+.badge{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  padding:6px 10px;
+  border-radius:999px;
+  font-size:12px;
+  font-weight:800;
+  border:1px solid transparent;
+}
+
+.notStarted{
+  color:#7a4a00;
+  background:rgba(255,173,29,0.25);
+  border-color:rgba(255,173,29,0.5);
+}
+
+.inProgress{
+  color:#0b5aa5;
+  background:rgba(5,166,240,0.2);
+  border-color:rgba(5,166,240,0.5);
+}
+
+.submitted{
+  color:#0a6b3f;
+  background:rgba(34,197,94,0.2);
+  border-color:rgba(34,197,94,0.5);
+}
+
+.ended{
+  color:#6b7280;
+  background:rgba(107,114,128,0.16);
+  border-color:rgba(107,114,128,0.35);
+}
+
+.empty{
+  margin-top:6px;
+  padding:14px;
+  border:1px dashed rgba(0,25,110,.24);
+  border-radius:12px;
+  color:rgba(0,25,110,.7);
+  font-weight:700;
+}
+
+@media (max-width:900px){
+  .pageTitle{
+    font-size:28px;
+  }
+
+  .examGrid{
+    grid-template-columns:1fr;
+  }
+
+  .cta{
+    justify-self:start;
+  }
+}

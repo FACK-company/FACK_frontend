@@ -130,3 +130,43 @@ export interface ProfessorRecordingListItem {
 export interface ProfessorRecordingsResponse {
   recordings: ProfessorRecordingListItem[];
 }
+
+export interface StudentProfileResponse {
+  username: string;
+}
+
+export interface StudentCourse {
+  id: string;
+  code: string;
+  name: string;
+  description?: string;
+  semester: string;
+}
+
+export interface StudentCoursesResponse {
+  courses: StudentCourse[];
+}
+
+export interface StudentExamSummary {
+  id: string;
+  courseId: string;
+  courseCode: string;
+  title: string;
+  status: "Not started" | "In progress" | "Ended" | "Submitted";
+  timeWindow: string;
+  durationMinutes: number;
+}
+
+export interface StudentCourseExamsResponse {
+  courseId: string;
+  exams: StudentExamSummary[];
+}
+
+export interface StudentCurrentExamResponse {
+  exam: StudentExamSummary | null;
+}
+
+export interface StudentExamDetailResponse extends StudentExamSummary {
+  description: string;
+  examFileUrl: string;
+}

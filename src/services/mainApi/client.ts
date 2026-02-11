@@ -20,6 +20,12 @@ import type {
   LoginRequest,
   LoginResponse,
   ProfessorProfileResponse,
+  StudentCourseExamsResponse,
+  StudentCoursesResponse,
+  StudentCurrentExamResponse,
+  StudentExamDetailResponse,
+  StudentExamSummary,
+  StudentProfileResponse,
 } from "@/types/api/main";
 import { httpRequest } from "@/utils/http";
 
@@ -270,6 +276,125 @@ const PLACEHOLDER_RECORDING_DETAILS: Record<string, ProfessorRecordingDetailResp
 };
 // PLACEHOLDER END
 
+// PLACEHOLDER START: student-side data.
+const PLACEHOLDER_STUDENT_NAME = "student_name";
+const PLACEHOLDER_STUDENT_COURSES = [
+  {
+    id: "cs207",
+    code: "CS207",
+    name: "Data Structures",
+    description: "Core data structures and algorithmic analysis.",
+    semester: "Spring 2026",
+  },
+  {
+    id: "cs201",
+    code: "CS201",
+    name: "Intro Programming",
+    description: "Programming fundamentals using problem-solving workflows.",
+    semester: "Spring 2026",
+  },
+  {
+    id: "cs105",
+    code: "CS105",
+    name: "Discrete Math",
+    description: "Logic, sets, combinatorics, and proof techniques.",
+    semester: "Spring 2026",
+  },
+];
+
+const PLACEHOLDER_STUDENT_EXAMS_BY_COURSE: Record<string, StudentExamSummary[]> = {
+  cs207: [
+    {
+      id: "final-exam",
+      courseId: "cs207",
+      courseCode: "CS207",
+      title: "Final Exam",
+      status: "In progress",
+      timeWindow: "Feb 10, 08:00-10:00",
+      durationMinutes: 120,
+    },
+    {
+      id: "midterm-2",
+      courseId: "cs207",
+      courseCode: "CS207",
+      title: "Midterm 2",
+      status: "Ended",
+      timeWindow: "Feb 12, 13:00-15:00",
+      durationMinutes: 120,
+    },
+  ],
+  cs201: [
+    {
+      id: "midterm-1",
+      courseId: "cs201",
+      courseCode: "CS201",
+      title: "Midterm 1",
+      status: "Not started",
+      timeWindow: "Feb 20, 09:00-10:30",
+      durationMinutes: 90,
+    },
+  ],
+  cs105: [
+    {
+      id: "quiz-5",
+      courseId: "cs105",
+      courseCode: "CS105",
+      title: "Quiz 5",
+      status: "Submitted",
+      timeWindow: "Feb 01, 09:00-09:30",
+      durationMinutes: 30,
+    },
+  ],
+};
+
+const PLACEHOLDER_STUDENT_EXAM_DETAILS: Record<string, StudentExamDetailResponse> = {
+  "cs207:final-exam": {
+    id: "final-exam",
+    courseId: "cs207",
+    courseCode: "CS207",
+    title: "Final Exam",
+    status: "In progress",
+    timeWindow: "Feb 10, 08:00-10:00",
+    durationMinutes: 120,
+    description: "Complete all coding tasks in the exam sheet and submit before time ends.",
+    examFileUrl: "/files/CS201_Spring_2026_HW2.pdf",
+  },
+  "cs207:midterm-2": {
+    id: "midterm-2",
+    courseId: "cs207",
+    courseCode: "CS207",
+    title: "Midterm 2",
+    status: "Ended",
+    timeWindow: "Feb 12, 13:00-15:00",
+    durationMinutes: 120,
+    description: "Closed-book written exam with algorithm design questions.",
+    examFileUrl: "/files/CS201_Spring_2026_HW2.pdf",
+  },
+  "cs201:midterm-1": {
+    id: "midterm-1",
+    courseId: "cs201",
+    courseCode: "CS201",
+    title: "Midterm 1",
+    status: "Not started",
+    timeWindow: "Feb 20, 09:00-10:30",
+    durationMinutes: 90,
+    description: "Programming fundamentals and debugging tasks.",
+    examFileUrl: "/files/CS201_Spring_2026_HW2.pdf",
+  },
+  "cs105:quiz-5": {
+    id: "quiz-5",
+    courseId: "cs105",
+    courseCode: "CS105",
+    title: "Quiz 5",
+    status: "Submitted",
+    timeWindow: "Feb 01, 09:00-09:30",
+    durationMinutes: 30,
+    description: "Short quiz on combinatorics and proof by induction.",
+    examFileUrl: "/files/CS201_Spring_2026_HW2.pdf",
+  },
+};
+// PLACEHOLDER END
+
 function buildPlaceholderExamDetails(courseId: string, examId: string): ProfessorExamDetailsResponse {
   const coursePayload =
     PLACEHOLDER_EXAMS_BY_COURSE_ID[courseId] ?? PLACEHOLDER_EXAMS_BY_COURSE_ID.cs207;
@@ -323,6 +448,90 @@ export const mainApi = {
     return httpRequest<ProfessorProfileResponse>(mainApiBaseUrl, "/prof/profile", {
       method: "GET",
     });
+  },
+
+  async getStudentProfile(): Promise<StudentProfileResponse> {
+    // PLACEHOLDER ONLY: remove this mock branch when student profile backend is ready.
+    if (MOCK_SERVER_TRUE) {
+      return { username: PLACEHOLDER_STUDENT_NAME };
+    }
+
+    return httpRequest<StudentProfileResponse>(mainApiBaseUrl, "/student/profile", {
+      method: "GET",
+    });
+  },
+
+  async getStudentCourses(): Promise<StudentCoursesResponse> {
+    // PLACEHOLDER ONLY: remove this mock branch when student courses backend is ready.
+    if (MOCK_SERVER_TRUE) {
+      return { courses: [...PLACEHOLDER_STUDENT_COURSES] };
+    }
+
+    return httpRequest<StudentCoursesResponse>(mainApiBaseUrl, "/student/courses", {
+      method: "GET",
+    });
+  },
+
+  async getStudentCourseExams(courseId: string): Promise<StudentCourseExamsResponse> {
+    // PLACEHOLDER ONLY: remove this mock branch when student course exams backend is ready.
+    if (MOCK_SERVER_TRUE) {
+      return {
+        courseId,
+        exams: [...(PLACEHOLDER_STUDENT_EXAMS_BY_COURSE[courseId] ?? [])],
+      };
+    }
+
+    return httpRequest<StudentCourseExamsResponse>(
+      mainApiBaseUrl,
+      `/student/courses/${courseId}/exams`,
+      { method: "GET" }
+    );
+  },
+
+  async getStudentCurrentExam(): Promise<StudentCurrentExamResponse> {
+    // PLACEHOLDER ONLY: remove this mock branch when student current exam backend is ready.
+    if (MOCK_SERVER_TRUE) {
+      const current =
+        Object.values(PLACEHOLDER_STUDENT_EXAMS_BY_COURSE)
+          .flat()
+          .find((exam) => exam.status === "In progress") ?? null;
+      return { exam: current };
+    }
+
+    return httpRequest<StudentCurrentExamResponse>(mainApiBaseUrl, "/student/exams/current", {
+      method: "GET",
+    });
+  },
+
+  async getStudentExamDetail(
+    courseId: string,
+    examId: string
+  ): Promise<StudentExamDetailResponse> {
+    // PLACEHOLDER ONLY: remove this mock branch when student exam-detail backend is ready.
+    if (MOCK_SERVER_TRUE) {
+      const key = `${courseId}:${examId}`;
+      const direct = PLACEHOLDER_STUDENT_EXAM_DETAILS[key];
+      if (direct) return direct;
+
+      const summary =
+        (PLACEHOLDER_STUDENT_EXAMS_BY_COURSE[courseId] || []).find(
+          (item) => item.id === examId
+        ) ||
+        Object.values(PLACEHOLDER_STUDENT_EXAM_DETAILS)[0];
+
+      return {
+        ...summary,
+        description:
+          "Exam details are running on placeholder mode until backend APIs are connected.",
+        examFileUrl: "/files/CS201_Spring_2026_HW2.pdf",
+      };
+    }
+
+    return httpRequest<StudentExamDetailResponse>(
+      mainApiBaseUrl,
+      `/student/courses/${courseId}/exams/${examId}`,
+      { method: "GET" }
+    );
   },
 
   async getProfessorCourses(): Promise<ProfessorCoursesResponse> {
