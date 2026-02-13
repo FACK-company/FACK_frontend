@@ -5,3 +5,67 @@
     radial-gradient(700px 420px at 80% 86%, rgba(225,225,222,0.85), transparent 60%),
     #fff;
 }
+
+.brandWithLogo{
+  display:inline-flex;
+  align-items:center;
+  gap:10px;
+}
+
+.brandLogo{
+  width:34px;
+  height:34px;
+  object-fit:contain;
+}
+
+.logoPhotoLg,
+.logoPhotoSm,
+.logoStackCard,
+.logoChip{
+  background-image:url("/img/logo.png");
+  background-repeat:no-repeat;
+  background-position:center;
+  background-size:56%;
+}
+
+.logoPhotoLg{
+  background-size:44%;
+}
+
+.logoPhotoSm{
+  background-size:52%;
+}
+
+.logoStackCard{
+  background-size:52%;
+}
+
+.logoChip{
+  background-size:65%;
+}
+
+.whoamiPhotoLg,
+.whoamiPhotoSmLeft,
+.whoamiPhotoSmRight{
+  background-image:url("/img/whoami.jpg");
+  background-repeat:no-repeat;
+  /* 220 (top) + 16 (gap) + 120 (bottom row) */
+  background-size:100% 356px;
+}
+
+.whoamiPhotoLg{
+  /* Top slice of the full image */
+  background-position:center top;
+}
+
+.whoamiPhotoSmLeft{
+  /* Bottom-left slice: scale to full 2-column width, pin to left/bottom */
+  background-size:calc(200% + 16px) 356px;
+  background-position:left bottom;
+}
+
+.whoamiPhotoSmRight{
+  /* Bottom-right slice: scale to full 2-column width, pin to right/bottom */
+  background-size:calc(200% + 16px) 356px;
+  background-position:right bottom;
+}

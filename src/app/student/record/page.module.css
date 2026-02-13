@@ -116,6 +116,7 @@
 
 .topbarLayout{
   grid-template-columns: repeat(3, minmax(0, 1fr));
+  align-items:center;
 }
 
 .pdfPreview{
@@ -174,10 +175,26 @@
 
   .topbarLayout{
     grid-template-columns:1fr;
+    row-gap:8px;
   }
 
   .topbarCenter,
   .topbarRight{
-    justify-self:start;
+    justify-content:flex-start;
   }
+}
+
+.topbarLayout :global(.status),
+.topbarLayout :global(.timer),
+.topbarLayout :global(.network){
+  margin:0;
+  height:100%;
+  align-items:center;
+}
+
+.topbarLayout :global(.label),
+.topbarLayout :global(.value){
+  line-height:1;
+  display:inline-flex;
+  align-items:center;
 }

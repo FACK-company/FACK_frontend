@@ -4,8 +4,9 @@ export default function AboutPage() {
   return (
     <div className={`page ${styles.pageBg}`}>
       <header className="nav">
-        <a className="brand" href="/about">
-          Fulbright AntiCheat Knight
+        <a className={`brand ${styles.brandWithLogo}`} href="/about">
+          <img className={styles.brandLogo} src="/img/logo.png" alt="FACK logo" />
+          <span>Fulbright AntiCheat Knight</span>
         </a>
         <nav className="nav-links" aria-hidden="true"></nav>
         <a className="btn-outline" href="/login">
@@ -22,49 +23,56 @@ export default function AboutPage() {
               happens
             </h1>
             <p className="lead">
-              We’re building a lightweight anti‑cheat program that screen‑records
-              exam sessions and streams them to a separate database in 5‑second
-              pieces (we’re still validating if that’s the best approach). The
-              goal is to keep recording reliable without overloading students’
-              personal laptops while they code.
+              Fulbright AntiCheat Knight is a web-based proctoring platform
+              designed to strengthen exam integrity while keeping the student
+              experience stable and lightweight. During an exam session, the
+              system captures screen activity and uploads recording data in
+              short intervals to support reliable evidence collection.
             </p>
             <p className="sub">
-              Exams are submitted on Gradescope, and we want the monitoring
-              layer to be as invisible and stable as possible.
+              The exam PDF is integrated directly in the exam workspace, so
+              students can review prompts and submit work in one controlled
+              flow. This reduces context-switching and gives instructors a
+              clear, auditable timeline of exam behavior.
             </p>
-            <button className="primary-btn">Get in Touch</button>
+            <a className="primary-btn" href="/login">
+              Get in Touch
+            </a>
           </div>
 
           <div className="hero-grid">
-            <div className="photo photo-lg"></div>
+            <div className={`photo photo-lg ${styles.whoamiPhotoLg}`}></div>
             <div className="photo-row">
-              <div className="photo photo-sm"></div>
-              <div className="photo photo-sm"></div>
+              <div className={`photo photo-sm ${styles.whoamiPhotoSmLeft}`}></div>
+              <div className={`photo photo-sm ${styles.whoamiPhotoSmRight}`}></div>
             </div>
           </div>
         </section>
 
         <section className="split">
           <div className="stack">
-            <div className="chip"></div>
-            <div className="chip"></div>
-            <div className="stack-card"></div>
-            <div className="chip"></div>
+            <div className={`chip ${styles.logoChip}`}></div>
+            <div className={`chip ${styles.logoChip}`}></div>
+            <div className={`stack-card ${styles.logoStackCard}`}></div>
+            <div className={`chip ${styles.logoChip}`}></div>
           </div>
 
           <div className="split-text">
-            <div className="kicker">GET TO KNOW US</div>
+            <div className="kicker">OUR APPROACH</div>
             <h2>
-              Why we make it
+              Reliable monitoring
               <br />
-              happens
+              without heavy overhead
             </h2>
             <p>
-              Screen recording is heavy. Our design focuses on short, reliable
-              uploads and a clean pipeline to protect both student performance
-              and exam integrity.
+              The architecture focuses on practical performance: lightweight
+              browser capture, resilient upload behavior, and structured
+              metadata for review. Instructors receive verifiable recording
+              evidence, while students keep a smooth testing environment.
             </p>
-            <button className="primary-btn">Get in Touch</button>
+            <a className="primary-btn" href="/login">
+              Get in Touch
+            </a>
           </div>
         </section>
 
@@ -76,19 +84,19 @@ export default function AboutPage() {
               <div className="icon-circle">
                 <span className="icon-dot"></span>
               </div>
-              <div className="icon-text">Lightweight</div>
+              <div className="icon-text">Efficient</div>
             </div>
             <div className="icon-card">
               <div className="icon-circle">
                 <span className="icon-target"></span>
               </div>
-              <div className="icon-text">Precise</div>
+              <div className="icon-text">Auditable</div>
             </div>
             <div className="icon-card">
               <div className="icon-circle">
                 <span className="icon-eye"></span>
               </div>
-              <div className="icon-text">Transparent</div>
+              <div className="icon-text">Secure</div>
             </div>
           </div>
         </section>
