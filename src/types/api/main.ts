@@ -7,6 +7,19 @@ export interface LoginRequest {
 
 export interface LoginResponse {
   success: boolean;
+  accessToken?: string;
+  refreshToken?: string;
+  tokenType?: string;
+  expiresIn?: number;
+  user?: LoginUser;
+}
+
+export interface LoginUser {
+  id?: string;
+  email?: string;
+  name?: string;
+  role?: string;
+  [key: string]: unknown;
 }
 
 export interface ProfessorProfileResponse {
