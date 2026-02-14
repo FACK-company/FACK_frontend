@@ -27,382 +27,370 @@ import type {
   StudentExamSummary,
   StudentProfileResponse,
 } from "@/types/api/main";
-import { httpRequest } from "@/utils/http";
+import { fetchServer } from "./index";
 
 const mainApiBaseUrl = process.env.NEXT_PUBLIC_MAIN_API_URL ?? "";
 
 // PLACEHOLDER ONLY: set to `false` when backend is running in production.
 const MOCK_SERVER_TRUE = true;
-// PLACEHOLDER START: professor courses used when backend is unavailable.
-const PLACEHOLDER_PROFESSOR_COURSES: ProfessorCourse[] = [
-  {
-    id: "cs207",
-    title: "CS207 — Data Structures",
-    term: "Spring 2026",
-    studentCount: 42,
-  },
-  {
-    id: "cs201",
-    title: "CS201 — Intro Programming",
-    term: "Spring 2026",
-    studentCount: 68,
-  },
-  {
-    id: "cs105",
-    title: "CS105 — Discrete Math",
-    term: "Spring 2026",
-    studentCount: 55,
-  },
-];
-// PLACEHOLDER END
-
-// PLACEHOLDER START: recordings list used on professor recordings page.
-const PLACEHOLDER_RECORDINGS: ProfessorRecordingListItem[] = [
-  {
-    sessionId: "s-1",
-    courseId: "cs207",
-    examId: "final-exam",
-    studentName: "Nguyen Minh",
-    examName: "CS207 Final",
-    classCode: "CS207",
-    status: "Completed",
-    duration: "01:28:14",
-    videoPath: "/video/video.mp4",
-  },
-  {
-    sessionId: "s-2",
-    courseId: "cs207",
-    examId: "final-exam",
-    studentName: "Tran Anh",
-    examName: "CS207 Final",
-    classCode: "CS207",
-    status: "Interrupted",
-    duration: "00:52:43",
-    videoPath: "/video/video.mp4",
-  },
-  {
-    sessionId: "s-7",
-    courseId: "cs201",
-    examId: "midterm-1",
-    studentName: "Pham Linh",
-    examName: "CS201 Midterm 1",
-    classCode: "CS201",
-    status: "Completed",
-    duration: "01:10:01",
-    videoPath: "/video/video.mp4",
-  },
-];
-// PLACEHOLDER END
-
-// PLACEHOLDER START: exams by course id.
-const PLACEHOLDER_EXAMS_BY_COURSE_ID: Record<string, ProfessorCourseExamsResponse> = {
-  cs207: {
-    courseTitle: "CS207 Data Structures",
-    exams: [
-      { id: "final-exam", examName: "Final Exam", courseCode: "CS207", studentCount: 42 },
-      { id: "midterm-2", examName: "Midterm 2", courseCode: "CS207", studentCount: 42 },
-      { id: "quiz-5", examName: "Quiz 5", courseCode: "CS207", studentCount: 42 },
-    ],
-  },
-  cs201: {
-    courseTitle: "CS201 Intro Programming",
-    exams: [
-      { id: "lab-practical", examName: "Lab Practical", courseCode: "CS201", studentCount: 68 },
-      { id: "midterm-1", examName: "Midterm 1", courseCode: "CS201", studentCount: 68 },
-      { id: "final-project-check", examName: "Final Project Check", courseCode: "CS201", studentCount: 68 },
-    ],
-  },
-  cs105: {
-    courseTitle: "CS105 Discrete Math",
-    exams: [
-      { id: "quiz-3", examName: "Quiz 3", courseCode: "CS105", studentCount: 55 },
-      { id: "midterm", examName: "Midterm", courseCode: "CS105", studentCount: 55 },
-      { id: "final-exam", examName: "Final Exam", courseCode: "CS105", studentCount: 55 },
-    ],
-  },
-};
-
-// PLACEHOLDER START: students by course id.
-const PLACEHOLDER_STUDENTS_BY_COURSE_ID: Record<string, ProfessorCourseStudent[]> = {
-  cs207: [
+const PLACEHOLDERS = {
+  professorCourses: [
     {
-      id: "st-1",
-      firstName: "Nguyen",
-      lastName: "Minh",
-      email: "nguyen.minh.123456@student.fulbright.edu.vn",
+      id: "cs207",
+      title: "CS207 — Data Structures",
+      term: "Spring 2026",
+      studentCount: 42,
     },
     {
-      id: "st-2",
-      firstName: "Tran",
-      lastName: "Anh",
-      email: "tran.anh.234567@student.fulbright.edu.vn",
+      id: "cs201",
+      title: "CS201 — Intro Programming",
+      term: "Spring 2026",
+      studentCount: 68,
     },
     {
-      id: "st-3",
-      firstName: "Le",
-      lastName: "Khoa",
-      email: "le.khoa.345678@student.fulbright.edu.vn",
+      id: "cs105",
+      title: "CS105 — Discrete Math",
+      term: "Spring 2026",
+      studentCount: 55,
     },
-  ],
-  cs201: [
+  ] as ProfessorCourse[],
+  recordings: [
     {
-      id: "st-4",
-      firstName: "Pham",
-      lastName: "Linh",
-      email: "pham.linh.456789@student.fulbright.edu.vn",
-    },
-  ],
-  cs105: [],
-};
-// PLACEHOLDER END
-
-// PLACEHOLDER START: exam session rows keyed by `courseId:examId`.
-const PLACEHOLDER_EXAM_SESSIONS: Record<string, ProfessorExamSessionRow[]> = {
-  "cs207:final-exam": [
-    {
-      id: "s-1",
+      sessionId: "s-1",
+      courseId: "cs207",
+      examId: "final-exam",
       studentName: "Nguyen Minh",
-      recordingStatus: "Completed",
+      examName: "CS207 Final",
+      classCode: "CS207",
+      status: "Completed",
+      duration: "01:28:14",
+      videoPath: "/video/video.mp4",
+    },
+    {
+      sessionId: "s-2",
+      courseId: "cs207",
+      examId: "final-exam",
+      studentName: "Tran Anh",
+      examName: "CS207 Final",
+      classCode: "CS207",
+      status: "Interrupted",
+      duration: "00:52:43",
+      videoPath: "/video/video.mp4",
+    },
+    {
+      sessionId: "s-7",
+      courseId: "cs201",
+      examId: "midterm-1",
+      studentName: "Pham Linh",
+      examName: "CS201 Midterm 1",
+      classCode: "CS201",
+      status: "Completed",
+      duration: "01:10:01",
+      videoPath: "/video/video.mp4",
+    },
+  ] as ProfessorRecordingListItem[],
+  examsByCourseId: {
+    cs207: {
+      courseTitle: "CS207 Data Structures",
+      exams: [
+        { id: "final-exam", examName: "Final Exam", courseCode: "CS207", studentCount: 42 },
+        { id: "midterm-2", examName: "Midterm 2", courseCode: "CS207", studentCount: 42 },
+        { id: "quiz-5", examName: "Quiz 5", courseCode: "CS207", studentCount: 42 },
+      ],
+    },
+    cs201: {
+      courseTitle: "CS201 Intro Programming",
+      exams: [
+        { id: "lab-practical", examName: "Lab Practical", courseCode: "CS201", studentCount: 68 },
+        { id: "midterm-1", examName: "Midterm 1", courseCode: "CS201", studentCount: 68 },
+        {
+          id: "final-project-check",
+          examName: "Final Project Check",
+          courseCode: "CS201",
+          studentCount: 68,
+        },
+      ],
+    },
+    cs105: {
+      courseTitle: "CS105 Discrete Math",
+      exams: [
+        { id: "quiz-3", examName: "Quiz 3", courseCode: "CS105", studentCount: 55 },
+        { id: "midterm", examName: "Midterm", courseCode: "CS105", studentCount: 55 },
+        { id: "final-exam", examName: "Final Exam", courseCode: "CS105", studentCount: 55 },
+      ],
+    },
+  } as Record<string, ProfessorCourseExamsResponse>,
+  studentsByCourseId: {
+    cs207: [
+      {
+        id: "st-1",
+        firstName: "Nguyen",
+        lastName: "Minh",
+        email: "nguyen.minh.123456@student.fulbright.edu.vn",
+      },
+      {
+        id: "st-2",
+        firstName: "Tran",
+        lastName: "Anh",
+        email: "tran.anh.234567@student.fulbright.edu.vn",
+      },
+      {
+        id: "st-3",
+        firstName: "Le",
+        lastName: "Khoa",
+        email: "le.khoa.345678@student.fulbright.edu.vn",
+      },
+    ],
+    cs201: [
+      {
+        id: "st-4",
+        firstName: "Pham",
+        lastName: "Linh",
+        email: "pham.linh.456789@student.fulbright.edu.vn",
+      },
+    ],
+    cs105: [],
+  } as Record<string, ProfessorCourseStudent[]>,
+  examSessions: {
+    "cs207:final-exam": [
+      {
+        id: "s-1",
+        studentName: "Nguyen Minh",
+        recordingStatus: "Completed",
+        startTime: "08:00:00",
+        endTime: "09:28:14",
+        duration: "01:28:14",
+        interruptions: "0",
+      },
+      {
+        id: "s-2",
+        studentName: "Tran Anh",
+        recordingStatus: "Interrupted",
+        startTime: "08:03:10",
+        endTime: "08:55:53",
+        duration: "00:52:43",
+        interruptions: "2",
+      },
+      {
+        id: "s-3",
+        studentName: "Le Khoa",
+        recordingStatus: "Missing",
+        startTime: "-",
+        endTime: "-",
+        duration: "-",
+        interruptions: "-",
+      },
+    ],
+    "cs207:midterm-2": [
+      {
+        id: "s-4",
+        studentName: "Pham Linh",
+        recordingStatus: "Completed",
+        startTime: "13:00:00",
+        endTime: "14:10:01",
+        duration: "01:10:01",
+        interruptions: "0",
+      },
+      {
+        id: "s-5",
+        studentName: "Vo Anh",
+        recordingStatus: "Completed",
+        startTime: "13:00:12",
+        endTime: "14:09:56",
+        duration: "01:09:44",
+        interruptions: "1",
+      },
+      {
+        id: "s-6",
+        studentName: "Do Nhat",
+        recordingStatus: "Interrupted",
+        startTime: "13:05:01",
+        endTime: "13:45:10",
+        duration: "00:40:09",
+        interruptions: "3",
+      },
+    ],
+  } as Record<string, ProfessorExamSessionRow[]>,
+  recordingDetails: {
+    "s-1": {
+      sessionId: "s-1",
+      examTitle: "Final Exam",
+      courseCode: "CS207",
+      studentName: "Nguyen Minh",
+      studentEmail: "nguyen.minh.123456@student.fulbright.edu.vn",
+      status: "Completed",
+      duration: "01:28:14",
       startTime: "08:00:00",
       endTime: "09:28:14",
-      duration: "01:28:14",
-      interruptions: "0",
+      videoPath: "/video/video.mp4",
+      comments: [
+        {
+          id: "c-1",
+          timestampSec: 132,
+          text: "Student switched tabs briefly.",
+          createdAt: "2026-02-11T08:05:00Z",
+        },
+        {
+          id: "c-2",
+          timestampSec: 904,
+          text: "Possible pause in activity.",
+          createdAt: "2026-02-11T08:19:00Z",
+        },
+      ],
     },
-    {
-      id: "s-2",
+    "s-2": {
+      sessionId: "s-2",
+      examTitle: "Final Exam",
+      courseCode: "CS207",
       studentName: "Tran Anh",
-      recordingStatus: "Interrupted",
+      studentEmail: "tran.anh.234567@student.fulbright.edu.vn",
+      status: "Interrupted",
+      duration: "00:52:43",
       startTime: "08:03:10",
       endTime: "08:55:53",
-      duration: "00:52:43",
-      interruptions: "2",
+      videoPath: "/video/video.mp4",
+      comments: [],
     },
-    {
-      id: "s-3",
+    "s-3": {
+      sessionId: "s-3",
+      examTitle: "Final Exam",
+      courseCode: "CS207",
       studentName: "Le Khoa",
-      recordingStatus: "Missing",
+      studentEmail: "le.khoa.345678@student.fulbright.edu.vn",
+      status: "Missing",
+      duration: "-",
       startTime: "-",
       endTime: "-",
-      duration: "-",
-      interruptions: "-",
+      videoPath: "/video/video.mp4",
+      comments: [],
     },
-  ],
-  "cs207:midterm-2": [
-    {
-      id: "s-4",
-      studentName: "Pham Linh",
-      recordingStatus: "Completed",
-      startTime: "13:00:00",
-      endTime: "14:10:01",
-      duration: "01:10:01",
-      interruptions: "0",
-    },
-    {
-      id: "s-5",
-      studentName: "Vo Anh",
-      recordingStatus: "Completed",
-      startTime: "13:00:12",
-      endTime: "14:09:56",
-      duration: "01:09:44",
-      interruptions: "1",
-    },
-    {
-      id: "s-6",
-      studentName: "Do Nhat",
-      recordingStatus: "Interrupted",
-      startTime: "13:05:01",
-      endTime: "13:45:10",
-      duration: "00:40:09",
-      interruptions: "3",
-    },
-  ],
-};
-// PLACEHOLDER END
-
-// PLACEHOLDER START: recording details keyed by `sessionId`.
-const PLACEHOLDER_RECORDING_DETAILS: Record<string, ProfessorRecordingDetailResponse> = {
-  "s-1": {
-    sessionId: "s-1",
-    examTitle: "Final Exam",
-    courseCode: "CS207",
-    studentName: "Nguyen Minh",
-    studentEmail: "nguyen.minh.123456@student.fulbright.edu.vn",
-    status: "Completed",
-    duration: "01:28:14",
-    startTime: "08:00:00",
-    endTime: "09:28:14",
-    videoPath: "/video/video.mp4",
-    comments: [
+  } as Record<string, ProfessorRecordingDetailResponse>,
+  student: {
+    name: "student_name",
+    courses: [
       {
-        id: "c-1",
-        timestampSec: 132,
-        text: "Student switched tabs briefly.",
-        createdAt: "2026-02-11T08:05:00Z",
+        id: "cs207",
+        code: "CS207",
+        name: "Data Structures",
+        description: "Core data structures and algorithmic analysis.",
+        semester: "Spring 2026",
       },
       {
-        id: "c-2",
-        timestampSec: 904,
-        text: "Possible pause in activity.",
-        createdAt: "2026-02-11T08:19:00Z",
+        id: "cs201",
+        code: "CS201",
+        name: "Intro Programming",
+        description: "Programming fundamentals using problem-solving workflows.",
+        semester: "Spring 2026",
+      },
+      {
+        id: "cs105",
+        code: "CS105",
+        name: "Discrete Math",
+        description: "Logic, sets, combinatorics, and proof techniques.",
+        semester: "Spring 2026",
       },
     ],
-  },
-  "s-2": {
-    sessionId: "s-2",
-    examTitle: "Final Exam",
-    courseCode: "CS207",
-    studentName: "Tran Anh",
-    studentEmail: "tran.anh.234567@student.fulbright.edu.vn",
-    status: "Interrupted",
-    duration: "00:52:43",
-    startTime: "08:03:10",
-    endTime: "08:55:53",
-    videoPath: "/video/video.mp4",
-    comments: [],
-  },
-  "s-3": {
-    sessionId: "s-3",
-    examTitle: "Final Exam",
-    courseCode: "CS207",
-    studentName: "Le Khoa",
-    studentEmail: "le.khoa.345678@student.fulbright.edu.vn",
-    status: "Missing",
-    duration: "-",
-    startTime: "-",
-    endTime: "-",
-    videoPath: "/video/video.mp4",
-    comments: [],
-  },
-};
-// PLACEHOLDER END
-
-// PLACEHOLDER START: student-side data.
-const PLACEHOLDER_STUDENT_NAME = "student_name";
-const PLACEHOLDER_STUDENT_COURSES = [
-  {
-    id: "cs207",
-    code: "CS207",
-    name: "Data Structures",
-    description: "Core data structures and algorithmic analysis.",
-    semester: "Spring 2026",
-  },
-  {
-    id: "cs201",
-    code: "CS201",
-    name: "Intro Programming",
-    description: "Programming fundamentals using problem-solving workflows.",
-    semester: "Spring 2026",
-  },
-  {
-    id: "cs105",
-    code: "CS105",
-    name: "Discrete Math",
-    description: "Logic, sets, combinatorics, and proof techniques.",
-    semester: "Spring 2026",
-  },
-];
-
-const PLACEHOLDER_STUDENT_EXAMS_BY_COURSE: Record<string, StudentExamSummary[]> = {
-  cs207: [
-    {
-      id: "final-exam",
-      courseId: "cs207",
-      courseCode: "CS207",
-      title: "Final Exam",
-      status: "In progress",
-      timeWindow: "Feb 10, 08:00-10:00",
-      durationMinutes: 120,
-    },
-    {
-      id: "midterm-2",
-      courseId: "cs207",
-      courseCode: "CS207",
-      title: "Midterm 2",
-      status: "Ended",
-      timeWindow: "Feb 12, 13:00-15:00",
-      durationMinutes: 120,
-    },
-  ],
-  cs201: [
-    {
-      id: "midterm-1",
-      courseId: "cs201",
-      courseCode: "CS201",
-      title: "Midterm 1",
-      status: "Not started",
-      timeWindow: "Feb 20, 09:00-10:30",
-      durationMinutes: 90,
-    },
-  ],
-  cs105: [
-    {
-      id: "quiz-5",
-      courseId: "cs105",
-      courseCode: "CS105",
-      title: "Quiz 5",
-      status: "Submitted",
-      timeWindow: "Feb 01, 09:00-09:30",
-      durationMinutes: 30,
-    },
-  ],
-};
-
-const PLACEHOLDER_STUDENT_EXAM_DETAILS: Record<string, StudentExamDetailResponse> = {
-  "cs207:final-exam": {
-    id: "final-exam",
-    courseId: "cs207",
-    courseCode: "CS207",
-    title: "Final Exam",
-    status: "In progress",
-    timeWindow: "Feb 10, 08:00-10:00",
-    durationMinutes: 120,
-    description: "Complete all coding tasks in the exam sheet and submit before time ends.",
-    examFileUrl: "/files/CS201_Spring_2026_HW2.pdf",
-  },
-  "cs207:midterm-2": {
-    id: "midterm-2",
-    courseId: "cs207",
-    courseCode: "CS207",
-    title: "Midterm 2",
-    status: "Ended",
-    timeWindow: "Feb 12, 13:00-15:00",
-    durationMinutes: 120,
-    description: "Closed-book written exam with algorithm design questions.",
-    examFileUrl: "/files/CS201_Spring_2026_HW2.pdf",
-  },
-  "cs201:midterm-1": {
-    id: "midterm-1",
-    courseId: "cs201",
-    courseCode: "CS201",
-    title: "Midterm 1",
-    status: "Not started",
-    timeWindow: "Feb 20, 09:00-10:30",
-    durationMinutes: 90,
-    description: "Programming fundamentals and debugging tasks.",
-    examFileUrl: "/files/CS201_Spring_2026_HW2.pdf",
-  },
-  "cs105:quiz-5": {
-    id: "quiz-5",
-    courseId: "cs105",
-    courseCode: "CS105",
-    title: "Quiz 5",
-    status: "Submitted",
-    timeWindow: "Feb 01, 09:00-09:30",
-    durationMinutes: 30,
-    description: "Short quiz on combinatorics and proof by induction.",
-    examFileUrl: "/files/CS201_Spring_2026_HW2.pdf",
+    examsByCourse: {
+      cs207: [
+        {
+          id: "final-exam",
+          courseId: "cs207",
+          courseCode: "CS207",
+          title: "Final Exam",
+          status: "In progress",
+          timeWindow: "Feb 10, 08:00-10:00",
+          durationMinutes: 120,
+        },
+        {
+          id: "midterm-2",
+          courseId: "cs207",
+          courseCode: "CS207",
+          title: "Midterm 2",
+          status: "Ended",
+          timeWindow: "Feb 12, 13:00-15:00",
+          durationMinutes: 120,
+        },
+      ],
+      cs201: [
+        {
+          id: "midterm-1",
+          courseId: "cs201",
+          courseCode: "CS201",
+          title: "Midterm 1",
+          status: "Not started",
+          timeWindow: "Feb 20, 09:00-10:30",
+          durationMinutes: 90,
+        },
+      ],
+      cs105: [
+        {
+          id: "quiz-5",
+          courseId: "cs105",
+          courseCode: "CS105",
+          title: "Quiz 5",
+          status: "Submitted",
+          timeWindow: "Feb 01, 09:00-09:30",
+          durationMinutes: 30,
+        },
+      ],
+    } as Record<string, StudentExamSummary[]>,
+    examDetails: {
+      "cs207:final-exam": {
+        id: "final-exam",
+        courseId: "cs207",
+        courseCode: "CS207",
+        title: "Final Exam",
+        status: "In progress",
+        timeWindow: "Feb 10, 08:00-10:00",
+        durationMinutes: 120,
+        description: "Complete all coding tasks in the exam sheet and submit before time ends.",
+        examFileUrl: "/files/CS201_Spring_2026_HW2.pdf",
+      },
+      "cs207:midterm-2": {
+        id: "midterm-2",
+        courseId: "cs207",
+        courseCode: "CS207",
+        title: "Midterm 2",
+        status: "Ended",
+        timeWindow: "Feb 12, 13:00-15:00",
+        durationMinutes: 120,
+        description: "Closed-book written exam with algorithm design questions.",
+        examFileUrl: "/files/CS201_Spring_2026_HW2.pdf",
+      },
+      "cs201:midterm-1": {
+        id: "midterm-1",
+        courseId: "cs201",
+        courseCode: "CS201",
+        title: "Midterm 1",
+        status: "Not started",
+        timeWindow: "Feb 20, 09:00-10:30",
+        durationMinutes: 90,
+        description: "Programming fundamentals and debugging tasks.",
+        examFileUrl: "/files/CS201_Spring_2026_HW2.pdf",
+      },
+      "cs105:quiz-5": {
+        id: "quiz-5",
+        courseId: "cs105",
+        courseCode: "CS105",
+        title: "Quiz 5",
+        status: "Submitted",
+        timeWindow: "Feb 01, 09:00-09:30",
+        durationMinutes: 30,
+        description: "Short quiz on combinatorics and proof by induction.",
+        examFileUrl: "/files/CS201_Spring_2026_HW2.pdf",
+      },
+    } as Record<string, StudentExamDetailResponse>,
   },
 };
-// PLACEHOLDER END
 
 function buildPlaceholderExamDetails(courseId: string, examId: string): ProfessorExamDetailsResponse {
   const coursePayload =
-    PLACEHOLDER_EXAMS_BY_COURSE_ID[courseId] ?? PLACEHOLDER_EXAMS_BY_COURSE_ID.cs207;
+    PLACEHOLDERS.examsByCourseId[courseId] ?? PLACEHOLDERS.examsByCourseId.cs207;
   const exam =
     coursePayload.exams.find((item) => item.id === examId) ?? coursePayload.exams[0];
   const sessions =
-    PLACEHOLDER_EXAM_SESSIONS[`${courseId}:${exam.id}`] ??
-    PLACEHOLDER_EXAM_SESSIONS["cs207:final-exam"] ??
+    PLACEHOLDERS.examSessions[`${courseId}:${exam.id}`] ??
+    PLACEHOLDERS.examSessions["cs207:final-exam"] ??
     [];
 
   const completedRecordings = sessions.filter(
@@ -430,13 +418,24 @@ export const mainApi = {
   async login(payload: LoginRequest): Promise<LoginResponse> {
     // PLACEHOLDER ONLY: remove this mock branch when auth backend is ready.
     if (MOCK_SERVER_TRUE) {
-      return { success: true };
+      const response: LoginResponse = {
+        success: true,
+        accessToken: "mock-access-token",
+        refreshToken: "mock-refresh-token",
+        tokenType: "Bearer",
+        expiresIn: 3600,
+        user: { email: payload.email },
+      };
+      return response;
     }
 
-    return httpRequest<LoginResponse>(mainApiBaseUrl, "/auth/login", {
+    const response = await fetchServer<LoginResponse>({
+      path: "/auth/login",
       method: "POST",
-      body: JSON.stringify(payload),
+      body: payload,
     });
+
+    return response;
   },
 
   async getProfessorProfile(): Promise<ProfessorProfileResponse> {
@@ -445,7 +444,9 @@ export const mainApi = {
       return { username: "prof_username" };
     }
 
-    return httpRequest<ProfessorProfileResponse>(mainApiBaseUrl, "/prof/profile", {
+    return fetchServer<ProfessorProfileResponse>({
+      baseUrl: mainApiBaseUrl,
+      path: "/prof/profile",
       method: "GET",
     });
   },
@@ -453,10 +454,13 @@ export const mainApi = {
   async getStudentProfile(): Promise<StudentProfileResponse> {
     // PLACEHOLDER ONLY: remove this mock branch when student profile backend is ready.
     if (MOCK_SERVER_TRUE) {
-      return { username: PLACEHOLDER_STUDENT_NAME };
+      console.log(PLACEHOLDERS.student.name);
+      return { username: PLACEHOLDERS.student.name };
     }
 
-    return httpRequest<StudentProfileResponse>(mainApiBaseUrl, "/student/profile", {
+    return fetchServer<StudentProfileResponse>({
+      baseUrl: mainApiBaseUrl,
+      path: "/student/profile",
       method: "GET",
     });
   },
@@ -464,10 +468,12 @@ export const mainApi = {
   async getStudentCourses(): Promise<StudentCoursesResponse> {
     // PLACEHOLDER ONLY: remove this mock branch when student courses backend is ready.
     if (MOCK_SERVER_TRUE) {
-      return { courses: [...PLACEHOLDER_STUDENT_COURSES] };
+      return { courses: [...PLACEHOLDERS.student.courses] };
     }
 
-    return httpRequest<StudentCoursesResponse>(mainApiBaseUrl, "/student/courses", {
+    return fetchServer<StudentCoursesResponse>({
+      baseUrl: mainApiBaseUrl,
+      path: "/student/courses",
       method: "GET",
     });
   },
@@ -477,28 +483,30 @@ export const mainApi = {
     if (MOCK_SERVER_TRUE) {
       return {
         courseId,
-        exams: [...(PLACEHOLDER_STUDENT_EXAMS_BY_COURSE[courseId] ?? [])],
+        exams: [...(PLACEHOLDERS.student.examsByCourse[courseId] ?? [])],
       };
     }
 
-    return httpRequest<StudentCourseExamsResponse>(
-      mainApiBaseUrl,
-      `/student/courses/${courseId}/exams`,
-      { method: "GET" }
-    );
+    return fetchServer<StudentCourseExamsResponse>({
+      baseUrl: mainApiBaseUrl,
+      path: `/student/courses/${courseId}/exams`,
+      method: "GET",
+    });
   },
 
   async getStudentCurrentExam(): Promise<StudentCurrentExamResponse> {
     // PLACEHOLDER ONLY: remove this mock branch when student current exam backend is ready.
     if (MOCK_SERVER_TRUE) {
       const current =
-        Object.values(PLACEHOLDER_STUDENT_EXAMS_BY_COURSE)
+        Object.values(PLACEHOLDERS.student.examsByCourse)
           .flat()
           .find((exam) => exam.status === "In progress") ?? null;
       return { exam: current };
     }
 
-    return httpRequest<StudentCurrentExamResponse>(mainApiBaseUrl, "/student/exams/current", {
+    return fetchServer<StudentCurrentExamResponse>({
+      baseUrl: mainApiBaseUrl,
+      path: "/student/exams/current",
       method: "GET",
     });
   },
@@ -510,14 +518,14 @@ export const mainApi = {
     // PLACEHOLDER ONLY: remove this mock branch when student exam-detail backend is ready.
     if (MOCK_SERVER_TRUE) {
       const key = `${courseId}:${examId}`;
-      const direct = PLACEHOLDER_STUDENT_EXAM_DETAILS[key];
+      const direct = PLACEHOLDERS.student.examDetails[key];
       if (direct) return direct;
 
       const summary =
-        (PLACEHOLDER_STUDENT_EXAMS_BY_COURSE[courseId] || []).find(
+        (PLACEHOLDERS.student.examsByCourse[courseId] || []).find(
           (item) => item.id === examId
         ) ||
-        Object.values(PLACEHOLDER_STUDENT_EXAM_DETAILS)[0];
+        Object.values(PLACEHOLDERS.student.examDetails)[0];
 
       return {
         ...summary,
@@ -527,20 +535,22 @@ export const mainApi = {
       };
     }
 
-    return httpRequest<StudentExamDetailResponse>(
-      mainApiBaseUrl,
-      `/student/courses/${courseId}/exams/${examId}`,
-      { method: "GET" }
-    );
+    return fetchServer<StudentExamDetailResponse>({
+      baseUrl: mainApiBaseUrl,
+      path: `/student/courses/${courseId}/exams/${examId}`,
+      method: "GET",
+    });
   },
 
   async getProfessorCourses(): Promise<ProfessorCoursesResponse> {
     // PLACEHOLDER ONLY: remove this mock branch when courses backend is ready.
     if (MOCK_SERVER_TRUE) {
-      return { courses: [...PLACEHOLDER_PROFESSOR_COURSES] };
+      return { courses: [...PLACEHOLDERS.professorCourses] };
     }
 
-    return httpRequest<ProfessorCoursesResponse>(mainApiBaseUrl, "/prof/courses", {
+    return fetchServer<ProfessorCoursesResponse>({
+      baseUrl: mainApiBaseUrl,
+      path: "/prof/courses",
       method: "GET",
     });
   },
@@ -556,9 +566,11 @@ export const mainApi = {
       };
     }
 
-    return httpRequest<ProfessorCourse>(mainApiBaseUrl, "/prof/courses", {
+    return fetchServer<ProfessorCourse>({
+      baseUrl: mainApiBaseUrl,
+      path: "/prof/courses",
       method: "POST",
-      body: JSON.stringify(payload),
+      body: payload,
     });
   },
 
@@ -566,15 +578,15 @@ export const mainApi = {
     // PLACEHOLDER ONLY: remove this mock branch when course-students backend is ready.
     if (MOCK_SERVER_TRUE) {
       return {
-        students: [...(PLACEHOLDER_STUDENTS_BY_COURSE_ID[courseId] ?? [])],
+        students: [...(PLACEHOLDERS.studentsByCourseId[courseId] ?? [])],
       };
     }
 
-    return httpRequest<ProfessorCourseStudentsResponse>(
-      mainApiBaseUrl,
-      `/prof/courses/${courseId}/students`,
-      { method: "GET" }
-    );
+    return fetchServer<ProfessorCourseStudentsResponse>({
+      baseUrl: mainApiBaseUrl,
+      path: `/prof/courses/${courseId}/students`,
+      method: "GET",
+    });
   },
 
   async addCourseStudent(
@@ -591,14 +603,12 @@ export const mainApi = {
       };
     }
 
-    return httpRequest<ProfessorCourseStudent>(
-      mainApiBaseUrl,
-      `/prof/courses/${courseId}/students`,
-      {
-        method: "POST",
-        body: JSON.stringify(payload),
-      }
-    );
+    return fetchServer<ProfessorCourseStudent>({
+      baseUrl: mainApiBaseUrl,
+      path: `/prof/courses/${courseId}/students`,
+      method: "POST",
+      body: payload,
+    });
   },
 
   async importCourseStudents(
@@ -617,31 +627,27 @@ export const mainApi = {
       };
     }
 
-    return httpRequest<ProfessorCourseStudentsResponse>(
-      mainApiBaseUrl,
-      `/prof/courses/${courseId}/students/import`,
-      {
-        method: "POST",
-        body: JSON.stringify({ students: payload }),
-      }
-    );
+    return fetchServer<ProfessorCourseStudentsResponse>({
+      baseUrl: mainApiBaseUrl,
+      path: `/prof/courses/${courseId}/students/import`,
+      method: "POST",
+      body: { students: payload },
+    });
   },
 
   async getCourseExams(courseId: string): Promise<ProfessorCourseExamsResponse> {
     // PLACEHOLDER ONLY: remove this mock branch when course-exams backend is ready.
     if (MOCK_SERVER_TRUE) {
       return (
-        PLACEHOLDER_EXAMS_BY_COURSE_ID[courseId] ?? PLACEHOLDER_EXAMS_BY_COURSE_ID.cs207
+        PLACEHOLDERS.examsByCourseId[courseId] ?? PLACEHOLDERS.examsByCourseId.cs207
       );
     }
 
-    return httpRequest<ProfessorCourseExamsResponse>(
-      mainApiBaseUrl,
-      `/prof/courses/${courseId}/exams`,
-      {
-        method: "GET",
-      }
-    );
+    return fetchServer<ProfessorCourseExamsResponse>({
+      baseUrl: mainApiBaseUrl,
+      path: `/prof/courses/${courseId}/exams`,
+      method: "GET",
+    });
   },
 
   async createCourseExam(
@@ -668,16 +674,12 @@ export const mainApi = {
       formData.append("exam_file", payload.examFile);
     }
 
-    const response = await fetch(`${mainApiBaseUrl}/prof/courses/${courseId}/exams`, {
+    return fetchServer<ProfessorExamRow>({
+      baseUrl: mainApiBaseUrl,
+      path: `/prof/courses/${courseId}/exams`,
       method: "POST",
       body: formData,
     });
-
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status}`);
-    }
-
-    return (await response.json()) as ProfessorExamRow;
   },
 
   async getExamDetails(
@@ -689,13 +691,11 @@ export const mainApi = {
       return buildPlaceholderExamDetails(courseId, examId);
     }
 
-    return httpRequest<ProfessorExamDetailsResponse>(
-      mainApiBaseUrl,
-      `/prof/courses/${courseId}/exams/${examId}`,
-      {
-        method: "GET",
-      }
-    );
+    return fetchServer<ProfessorExamDetailsResponse>({
+      baseUrl: mainApiBaseUrl,
+      path: `/prof/courses/${courseId}/exams/${examId}`,
+      method: "GET",
+    });
   },
 
   async getRecordingDetail(
@@ -705,8 +705,8 @@ export const mainApi = {
   ): Promise<ProfessorRecordingDetailResponse> {
     // PLACEHOLDER ONLY: remove this mock branch when recording-detail backend is ready.
     if (MOCK_SERVER_TRUE) {
-      const fallback = PLACEHOLDER_RECORDING_DETAILS["s-1"];
-      const row = PLACEHOLDER_RECORDING_DETAILS[sessionId] ?? fallback;
+      const fallback = PLACEHOLDERS.recordingDetails["s-1"];
+      const row = PLACEHOLDERS.recordingDetails[sessionId] ?? fallback;
       return {
         ...row,
         courseCode: row.courseCode || courseId.toUpperCase(),
@@ -714,22 +714,22 @@ export const mainApi = {
       };
     }
 
-    return httpRequest<ProfessorRecordingDetailResponse>(
-      mainApiBaseUrl,
-      `/prof/courses/${courseId}/exams/${examId}/sessions/${sessionId}`,
-      {
-        method: "GET",
-      }
-    );
+    return fetchServer<ProfessorRecordingDetailResponse>({
+      baseUrl: mainApiBaseUrl,
+      path: `/prof/courses/${courseId}/exams/${examId}/sessions/${sessionId}`,
+      method: "GET",
+    });
   },
 
   async getProfessorRecordings(): Promise<ProfessorRecordingsResponse> {
     // PLACEHOLDER ONLY: remove this mock branch when recordings-list backend is ready.
     if (MOCK_SERVER_TRUE) {
-      return { recordings: PLACEHOLDER_RECORDINGS };
+      return { recordings: PLACEHOLDERS.recordings };
     }
 
-    return httpRequest<ProfessorRecordingsResponse>(mainApiBaseUrl, "/prof/recordings", {
+    return fetchServer<ProfessorRecordingsResponse>({
+      baseUrl: mainApiBaseUrl,
+      path: "/prof/recordings",
       method: "GET",
     });
   },
@@ -750,13 +750,11 @@ export const mainApi = {
       };
     }
 
-    return httpRequest<ProfessorRecordingComment>(
-      mainApiBaseUrl,
-      `/prof/courses/${courseId}/exams/${examId}/sessions/${sessionId}/comments`,
-      {
-        method: "POST",
-        body: JSON.stringify(payload),
-      }
-    );
+    return fetchServer<ProfessorRecordingComment>({
+      baseUrl: mainApiBaseUrl,
+      path: `/prof/courses/${courseId}/exams/${examId}/sessions/${sessionId}/comments`,
+      method: "POST",
+      body: payload,
+    });
   },
 };
