@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "../styles/globals/globals.css";
+import AuthBootstrap from "@/components/AuthBootstrap";
 
 // Root layout for Next.js App Router
 export const metadata: Metadata = {
@@ -20,7 +21,10 @@ export default function RootLayout({
                     rel="stylesheet"
                 />
             </head>
-            <body>{children}</body>
+            <body>
+                <AuthBootstrap />
+                {children}
+            </body>
         </html>
     );
 }

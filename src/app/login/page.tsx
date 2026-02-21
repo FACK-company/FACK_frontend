@@ -52,15 +52,28 @@ export default function LoginPage() {
         password: password.trim(),
       });
 
-      if (!response.success) {
+      if (!response?.accessToken) {
         setFormError("Invalid credentials.");
         return;
       }
 
-      const target = isStudentEmail(value) ? "/student/home" : "/prof/home";
+      const role = String(response.role ?? response.user?.role ?? "").toLowerCase();
+      const target =
+        role === "student"
+          ? "/student/home"
+          : role === "professor"
+          ? "/prof/home"
+          : isStudentEmail(value)
+          ? "/student/home"
+          : "/prof/home";
       router.push(target);
-    } catch {
-      setFormError("Unable to sign in right now. Please try again.");
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "";
+      if (message.includes("HTTP 401") || message.includes("HTTP 403")) {
+        setFormError("Invalid credentials.");
+      } else {
+        setFormError("Unable to sign in right now. Please try again.");
+      }
     } finally {
       setIsSubmitting(false);
     }

@@ -6,11 +6,15 @@ export interface LoginRequest {
 }
 
 export interface LoginResponse {
-  success: boolean;
+  success?: boolean;
   accessToken?: string;
   refreshToken?: string;
   tokenType?: string;
   expiresIn?: number;
+  userId?: string;
+  email?: string;
+  name?: string;
+  role?: string;
   user?: LoginUser;
 }
 

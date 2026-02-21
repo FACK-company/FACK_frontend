@@ -1,4 +1,5 @@
 // Main API exports
+import { clearAccessToken, getAccessToken, setAccessToken } from "./session";
 
 export interface ApiFetchOptions {
 	baseUrl?: string;
@@ -7,9 +8,12 @@ export interface ApiFetchOptions {
 	headers?: HeadersInit;
 	body?: unknown;
 	timeoutMs?: number;
+	retryOnAuthFailure?: boolean;
 }
 
 const DEFAULT_TIMEOUT_MS = Number(process.env.NEXT_PUBLIC_API_TIMEOUT ?? 30000);
+const AUTH_REFRESH_PATH = "/auth/refresh";
+let refreshInFlight: Promise<string | null> | null = null;
 
 function getCookieValue(name: string): string | null {
 	if (typeof document === "undefined") return null;
@@ -21,6 +25,45 @@ function isUnsafeMethod(method: string): boolean {
 	return !["GET", "HEAD", "OPTIONS"].includes(method.toUpperCase());
 }
 
+function isAuthPath(path: string): boolean {
+	return path.startsWith("/auth/");
+}
+
+async function refreshAccessToken(baseUrl: string, timeoutMs: number): Promise<string | null> {
+	if (!refreshInFlight) {
+		refreshInFlight = (async () => {
+			const controller = new AbortController();
+			const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+			try {
+				const response = await fetch(`${baseUrl}${AUTH_REFRESH_PATH}`, {
+					method: "POST",
+					credentials: "include",
+					signal: controller.signal,
+				});
+				if (!response.ok) {
+					clearAccessToken();
+					return null;
+				}
+				const payload = (await response.json()) as { accessToken?: string };
+				const token = payload.accessToken ?? null;
+				if (token) {
+					setAccessToken(token);
+					return token;
+				}
+				clearAccessToken();
+				return null;
+			} catch {
+				clearAccessToken();
+				return null;
+			} finally {
+				clearTimeout(timeoutId);
+				refreshInFlight = null;
+			}
+		})();
+	}
+	return refreshInFlight;
+}
+
 export async function fetchServer<T>({
 	baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL ?? "",
 	path,
@@ -28,6 +71,7 @@ export async function fetchServer<T>({
 	headers,
 	body,
 	timeoutMs,
+	retryOnAuthFailure = true,
 }: ApiFetchOptions): Promise<T> {
 	const controller = new AbortController();
 	const timeout = timeoutMs ?? DEFAULT_TIMEOUT_MS;
@@ -40,6 +84,10 @@ export async function fetchServer<T>({
 		const requestHeaders = new Headers(headers ?? {});
 		if (!isFormData && !requestHeaders.has("Content-Type")) {
 			requestHeaders.set("Content-Type", "application/json");
+		}
+		const accessToken = getAccessToken();
+		if (accessToken && !requestHeaders.has("Authorization")) {
+			requestHeaders.set("Authorization", `Bearer ${accessToken}`);
 		}
 
 		const csrfToken = getCookieValue("XSRF-TOKEN");
@@ -60,6 +108,24 @@ export async function fetchServer<T>({
 		});
 
 		if (!response.ok) {
+			if (
+				response.status === 401 &&
+				retryOnAuthFailure &&
+				!isAuthPath(path)
+			) {
+				const refreshed = await refreshAccessToken(baseUrl, timeout);
+				if (refreshed) {
+					return fetchServer<T>({
+						baseUrl,
+						path,
+						method,
+						headers,
+						body,
+						timeoutMs: timeout,
+						retryOnAuthFailure: false,
+					});
+				}
+			}
 			throw new Error(`HTTP ${response.status}`);
 		}
 
@@ -87,4 +153,5 @@ export async function fetchServer<T>({
 	}
 }
 
+export { getAccessToken, setAccessToken, clearAccessToken, refreshAccessToken };
 export * from "./client";

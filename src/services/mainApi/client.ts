@@ -27,12 +27,12 @@ import type {
   StudentExamSummary,
   StudentProfileResponse,
 } from "@/types/api/main";
-import { fetchServer } from "./index";
+import { clearAccessToken, fetchServer, refreshAccessToken, setAccessToken } from "./index";
 
 const mainApiBaseUrl = process.env.NEXT_PUBLIC_MAIN_API_URL ?? "";
 
-// PLACEHOLDER ONLY: set to `false` when backend is running in production.
-const MOCK_SERVER_TRUE = true;
+// PLACEHOLDER ONLY: set to `true` when backend is unavailable.
+const MOCK_SERVER_TRUE = false;
 const PLACEHOLDERS = {
   professorCourses: [
     {
@@ -383,6 +383,61 @@ const PLACEHOLDERS = {
   },
 };
 
+type BackendMeResponse = {
+  id: string;
+  name: string;
+  email: string;
+  role?: string;
+};
+
+type BackendCourseResponse = {
+  id: string;
+  code: string;
+  name: string;
+  description?: string;
+  semester?: string;
+};
+
+type BackendExamResponse = {
+  id: string;
+  courseId: string;
+  title: string;
+  description?: string;
+  examFileUrl?: string;
+  durationMinutes?: number;
+  startAvailableAt?: string;
+  endAvailableAt?: string;
+};
+
+function formatMonthDayTime(dateLike?: string): { monthDay: string; time: string } {
+  if (!dateLike) return { monthDay: "-", time: "-" };
+  const d = new Date(dateLike);
+  if (Number.isNaN(d.getTime())) return { monthDay: "-", time: "-" };
+  const month = d.toLocaleString("en-US", { month: "short" });
+  const day = d.getDate();
+  const hh = String(d.getHours()).padStart(2, "0");
+  const mm = String(d.getMinutes()).padStart(2, "0");
+  return { monthDay: `${month} ${day}`, time: `${hh}:${mm}` };
+}
+
+function formatTimeWindow(start?: string, end?: string): string {
+  const s = formatMonthDayTime(start);
+  const e = formatMonthDayTime(end);
+  if (s.monthDay === "-" || e.monthDay === "-") return "-";
+  return `${s.monthDay}, ${s.time}-${e.time}`;
+}
+
+function toStudentExamStatus(start?: string, end?: string): StudentExamSummary["status"] {
+  if (!start || !end) return "Not started";
+  const now = Date.now();
+  const startMs = new Date(start).getTime();
+  const endMs = new Date(end).getTime();
+  if (Number.isNaN(startMs) || Number.isNaN(endMs)) return "Not started";
+  if (now < startMs) return "Not started";
+  if (now <= endMs) return "In progress";
+  return "Ended";
+}
+
 function buildPlaceholderExamDetails(courseId: string, examId: string): ProfessorExamDetailsResponse {
   const coursePayload =
     PLACEHOLDERS.examsByCourseId[courseId] ?? PLACEHOLDERS.examsByCourseId.cs207;
@@ -434,8 +489,32 @@ export const mainApi = {
       method: "POST",
       body: payload,
     });
+    if (response?.accessToken) {
+      setAccessToken(response.accessToken);
+    }
 
     return response;
+  },
+
+  async refreshAccessToken(): Promise<LoginResponse | null> {
+    const token = await refreshAccessToken(mainApiBaseUrl, Number(process.env.NEXT_PUBLIC_API_TIMEOUT ?? 30000));
+    if (!token) return null;
+    return { accessToken: token, tokenType: "Bearer" };
+  },
+
+  async logout(): Promise<void> {
+    try {
+      await fetchServer<void>({
+        path: "/auth/logout",
+        method: "POST",
+      });
+    } finally {
+      clearAccessToken();
+    }
+  },
+
+  async bootstrapAuth(): Promise<LoginResponse | null> {
+    return this.refreshAccessToken();
   },
 
   async getProfessorProfile(): Promise<ProfessorProfileResponse> {
@@ -444,11 +523,12 @@ export const mainApi = {
       return { username: "prof_username" };
     }
 
-    return fetchServer<ProfessorProfileResponse>({
+    const me = await fetchServer<BackendMeResponse>({
       baseUrl: mainApiBaseUrl,
-      path: "/prof/profile",
+      path: "/auth/me",
       method: "GET",
     });
+    return { username: me.name || "prof_username" };
   },
 
   async getStudentProfile(): Promise<StudentProfileResponse> {
@@ -458,11 +538,12 @@ export const mainApi = {
       return { username: PLACEHOLDERS.student.name };
     }
 
-    return fetchServer<StudentProfileResponse>({
+    const me = await fetchServer<BackendMeResponse>({
       baseUrl: mainApiBaseUrl,
-      path: "/student/profile",
+      path: "/auth/me",
       method: "GET",
     });
+    return { username: me.name || PLACEHOLDERS.student.name };
   },
 
   async getStudentCourses(): Promise<StudentCoursesResponse> {
@@ -471,11 +552,27 @@ export const mainApi = {
       return { courses: [...PLACEHOLDERS.student.courses] };
     }
 
-    return fetchServer<StudentCoursesResponse>({
+    const me = await fetchServer<BackendMeResponse>({
       baseUrl: mainApiBaseUrl,
-      path: "/student/courses",
+      path: "/auth/me",
       method: "GET",
     });
+
+    const courses = await fetchServer<BackendCourseResponse[]>({
+      baseUrl: mainApiBaseUrl,
+      path: `/course-enrollments/by-student/${me.id}`,
+      method: "GET",
+    });
+
+    return {
+      courses: (courses ?? []).map((course) => ({
+        id: course.id,
+        code: course.code || course.id,
+        name: course.name,
+        description: course.description || "",
+        semester: course.semester || "N/A",
+      })),
+    };
   },
 
   async getStudentCourseExams(courseId: string): Promise<StudentCourseExamsResponse> {
@@ -487,11 +584,24 @@ export const mainApi = {
       };
     }
 
-    return fetchServer<StudentCourseExamsResponse>({
+    const exams = await fetchServer<BackendExamResponse[]>({
       baseUrl: mainApiBaseUrl,
-      path: `/student/courses/${courseId}/exams`,
+      path: `/exams/by-course/${courseId}`,
       method: "GET",
     });
+
+    return {
+      courseId,
+      exams: (exams ?? []).map((exam) => ({
+        id: exam.id,
+        courseId: exam.courseId || courseId,
+        courseCode: (exam.courseId || courseId).toUpperCase(),
+        title: exam.title,
+        status: toStudentExamStatus(exam.startAvailableAt, exam.endAvailableAt),
+        timeWindow: formatTimeWindow(exam.startAvailableAt, exam.endAvailableAt),
+        durationMinutes: exam.durationMinutes || 0,
+      })),
+    };
   },
 
   async getStudentCurrentExam(): Promise<StudentCurrentExamResponse> {
@@ -504,11 +614,15 @@ export const mainApi = {
       return { exam: current };
     }
 
-    return fetchServer<StudentCurrentExamResponse>({
-      baseUrl: mainApiBaseUrl,
-      path: "/student/exams/current",
-      method: "GET",
-    });
+    const coursesResp = await this.getStudentCourses();
+    const examsByCourse = await Promise.all(
+      (coursesResp.courses || []).map((course) => this.getStudentCourseExams(course.id))
+    );
+    const currentExam =
+      examsByCourse
+        .flatMap((entry) => entry.exams)
+        .find((exam) => exam.status === "In progress") ?? null;
+    return { exam: currentExam };
   },
 
   async getStudentExamDetail(
@@ -535,11 +649,24 @@ export const mainApi = {
       };
     }
 
-    return fetchServer<StudentExamDetailResponse>({
+    const exam = await fetchServer<BackendExamResponse>({
       baseUrl: mainApiBaseUrl,
-      path: `/student/courses/${courseId}/exams/${examId}`,
+      path: `/exams/${examId}`,
       method: "GET",
     });
+
+    const normalizedCourseId = exam.courseId || courseId;
+    return {
+      id: exam.id,
+      courseId: normalizedCourseId,
+      courseCode: normalizedCourseId.toUpperCase(),
+      title: exam.title,
+      status: toStudentExamStatus(exam.startAvailableAt, exam.endAvailableAt),
+      timeWindow: formatTimeWindow(exam.startAvailableAt, exam.endAvailableAt),
+      durationMinutes: exam.durationMinutes || 0,
+      description: exam.description || "",
+      examFileUrl: exam.examFileUrl || "/files/CS201_Spring_2026_HW2.pdf",
+    };
   },
 
   async getProfessorCourses(): Promise<ProfessorCoursesResponse> {
