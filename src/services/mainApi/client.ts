@@ -29,7 +29,7 @@ import type {
 } from "@/types/api/main";
 import { clearAccessToken, fetchServer, refreshAccessToken, setAccessToken } from "./index";
 
-const mainApiBaseUrl = process.env.NEXT_PUBLIC_MAIN_API_URL ?? "";
+const mainApiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL ?? "";
 
 // PLACEHOLDER ONLY: set to `true` when backend is unavailable.
 const MOCK_SERVER_TRUE = false;
@@ -483,7 +483,6 @@ export const mainApi = {
       };
       return response;
     }
-
     const response = await fetchServer<LoginResponse>({
       path: "/auth/login",
       method: "POST",

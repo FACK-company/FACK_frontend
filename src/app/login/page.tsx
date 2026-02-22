@@ -33,10 +33,10 @@ export default function LoginPage() {
       setEmailError("Please enter your Fulbright email.");
       return;
     }
-    if (!isFulbrightEmail(value)) {
-      setEmailError("Please use your Fulbright email.");
-      return;
-    }
+    // if (!isFulbrightEmail(value)) {
+    //   setEmailError("Please use your Fulbright email.");
+    //   return;
+    // }
     if (!password.trim()) {
       setPasswordError("Please enter your password.");
       return;
