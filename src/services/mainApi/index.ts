@@ -1,5 +1,5 @@
 // Main API exports
-import { clearAccessToken, getAccessToken, setAccessToken } from "./session";
+import { clearAccessToken, clearUserMetadata, getAccessToken, getUserMetadata, setAccessToken, setUserMetadata } from "./session";
 
 export interface ApiFetchOptions {
 	baseUrl?: string;
@@ -99,6 +99,12 @@ export async function fetchServer<T>({
 			requestHeaders.set("X-XSRF-TOKEN", csrfToken);
 		}
 
+		console.log(`Making API request to ${path} with method ${method}`);
+		console.log("Request headers: ", Object.fromEntries(requestHeaders.entries()));
+		if (hasBody) {
+			console.log("Request body: ", body);
+		}
+
 		const response = await fetch(`${baseUrl}${path}`, {
 			method,
 			headers: requestHeaders,
@@ -106,6 +112,9 @@ export async function fetchServer<T>({
 			credentials: "include",
 			signal: controller.signal,
 		});
+
+		console.log(`Received response with status ${response.status} for ${path}`);
+		console.log("response ", response);
 
 		if (!response.ok) {
 			if (
@@ -148,10 +157,22 @@ export async function fetchServer<T>({
 		} catch {
 			return text as T;
 		}
-	} finally {
+	} catch (error) {
+		console.error(`Error during API request to ${path}:`, error);
+		throw error;
+	} 
+	finally {
 		clearTimeout(timeoutId);
 	}
 }
 
-export { getAccessToken, setAccessToken, clearAccessToken, refreshAccessToken };
+export {
+	getAccessToken,
+	setAccessToken,
+	clearAccessToken,
+	getUserMetadata,
+	setUserMetadata,
+	clearUserMetadata,
+	refreshAccessToken,
+};
 export * from "./client";

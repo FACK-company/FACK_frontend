@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { mainApi } from "@/services";
+import { mainApi, setUserMetadata } from "@/services";
 import styles from "./page.module.css";
 
 export default function LoginPage() {
@@ -57,11 +57,18 @@ export default function LoginPage() {
         return;
       }
 
-      const role = String(response.role ?? response.user?.role ?? "").toLowerCase();
+      const userRole = String(response.role ?? response.user?.role ?? "").toLowerCase();
+      const userId = response.userId || response.user?.id || "";
+      const userName = response.name || response.user?.name || value;
+
+      // Store user metadata for future usage
+      setUserMetadata({ id: userId, name: userName, role: userRole });
+      // console.log("User metadata stored:", { id: userId, name: userName, role: userRole });
+
       const target =
-        role === "student"
+        userRole === "student"
           ? "/student/home"
-          : role === "professor"
+          : userRole === "professor"
           ? "/prof/home"
           : isStudentEmail(value)
           ? "/student/home"

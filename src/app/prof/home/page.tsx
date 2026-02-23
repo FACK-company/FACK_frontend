@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { mainApi } from "@/services";
+import { getUserMetadata, mainApi } from "@/services";
 import type { AddProfessorCourseRequest, ProfessorCourse } from "@/types/api/main";
 import styles from "./page.module.css";
 
@@ -9,32 +9,43 @@ const DEFAULT_PROF_USERNAME = "prof_username";
 
 export default function ProfHome() {
   const [username, setUsername] = useState(DEFAULT_PROF_USERNAME);
+  const [profId, setProfId] = useState('');
   const [courses, setCourses] = useState<ProfessorCourse[]>([]);
   const [open, setOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [form, setForm] = useState<AddProfessorCourseRequest>({
-    courseCode: "",
-    courseName: "",
-    term: "Spring 2026",
-    studentCount: 0,
+    code: "",
+    name: "",
+    semester: "Spring 2026",
+    professorId: "",
   });
 
   useEffect(() => {
     let isMounted = true;
 
     async function loadData() {
+      const userMetadata = getUserMetadata();
+      const resolvedProfId = userMetadata?.id || '';
+      const resolvedDisplayName = userMetadata?.name || '';
+      setProfId(resolvedProfId);
+      setUsername(resolvedDisplayName);
       try {
-        const [profile, coursesResp] = await Promise.all([
-          mainApi.getProfessorProfile(),
-          mainApi.getProfessorCourses(),
-        ]);
+        // console.log("Starting loadData: Loading metadata from localStorage and fetching courses...");
+        const coursesResp = await mainApi.getProfessorCourses(resolvedProfId);
         if (!isMounted) return;
-        setUsername(profile.username || DEFAULT_PROF_USERNAME);
-        setCourses([...(coursesResp.courses || [])]);
-      } catch {
+        // console.log("Loaded courses: ", coursesResp);
+        // console.log("Setting courses: ", coursesResp.courses);
+        setCourses([...(coursesResp || [])]);
+      } catch (error) {
         if (!isMounted) return;
+        console.error("loadData failed with error:", error);
+        console.error(
+          "Error message:",
+          error instanceof Error ? error.message : String(error)
+        );
         setUsername(DEFAULT_PROF_USERNAME);
+        setProfId(DEFAULT_PROF_USERNAME);
         setCourses([]);
       }
     }
@@ -48,34 +59,32 @@ export default function ProfHome() {
 
   const handleCreateCourse = async () => {
     const payload: AddProfessorCourseRequest = {
-      courseCode: form.courseCode.trim(),
-      courseName: form.courseName.trim(),
-      term: form.term.trim(),
-      studentCount: Number(form.studentCount),
+      code: form.code.trim(),
+      name: form.name.trim(),
+      semester: form.semester.trim(),
+      professorId: profId,
     };
 
-    if (!payload.courseCode || !payload.courseName || !payload.term) {
-      setError("Please fill in course code, course name, and term.");
-      return;
-    }
-    if (Number.isNaN(payload.studentCount) || payload.studentCount < 0) {
-      setError("Student count must be 0 or greater.");
+    if (!payload.code || !payload.name) {
+      setError("Please fill in course code and course name.");
       return;
     }
 
     setSaving(true);
     setError("");
     try {
+      // console.log("Creating course with payload: ", payload);
       const created = await mainApi.createProfessorCourse(payload);
       setCourses((prev) => [created, ...prev]);
       setOpen(false);
       setForm({
-        courseCode: "",
-        courseName: "",
-        term: "Spring 2026",
-        studentCount: 0,
+        code: "",
+        name: "",
+        semester: "Spring 2026",
+        professorId: profId,
       });
-    } catch {
+    } catch(error) {
+      console.error("Error creating course ", error);
       setError("Unable to create course right now.");
     } finally {
       setSaving(false);
@@ -104,20 +113,23 @@ export default function ProfHome() {
         <section className="frame">
           <div className={styles.frameHead}>
             <div className="page-title">Courses</div>
-            <button className={styles.createTrigger} type="button" onClick={() => setOpen(true)}>
+            {/* <button className={styles.createTrigger} type="button" onClick={() => setOpen(true)}>
               <span className={styles.addBtn} aria-hidden="true">
                 +
               </span>
               <span>Create new course</span>
-            </button>
+            </button> */}
           </div>
 
           <div className="cards">
             {courses.map((course) => (
               <article className="course-card" key={course.id}>
-                <div className="course-title">{course.title}</div>
+                <div className="course-title">{course.code} - {course.name}</div>
+                {/* <div className="course-meta">
+                  {course.semester} • {course.studentCount} students
+                </div> */}
                 <div className="course-meta">
-                  {course.term} • {course.studentCount} students
+                  {course.semester}
                 </div>
                 <a className="primary-btn" href={`/prof/course?courseId=${course.id}`}>
                   View Course
@@ -137,8 +149,8 @@ export default function ProfHome() {
                 <span>Course code</span>
                 <input
                   type="text"
-                  value={form.courseCode}
-                  onChange={(e) => setForm((p) => ({ ...p, courseCode: e.target.value }))}
+                  value={form.code}
+                  onChange={(e) => setForm((p) => ({ ...p, code: e.target.value }))}
                   placeholder="CS207"
                 />
               </label>
@@ -146,29 +158,18 @@ export default function ProfHome() {
                 <span>Course name</span>
                 <input
                   type="text"
-                  value={form.courseName}
-                  onChange={(e) => setForm((p) => ({ ...p, courseName: e.target.value }))}
+                  value={form.name}
+                  onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))}
                   placeholder="Data Structures"
                 />
               </label>
               <label className={styles.field}>
-                <span>Term</span>
+                <span>semester</span>
                 <input
                   type="text"
-                  value={form.term}
-                  onChange={(e) => setForm((p) => ({ ...p, term: e.target.value }))}
+                  value={form.semester}
+                  onChange={(e) => setForm((p) => ({ ...p, semester: e.target.value }))}
                   placeholder="Spring 2026"
-                />
-              </label>
-              <label className={styles.field}>
-                <span>Student count</span>
-                <input
-                  type="number"
-                  min={0}
-                  value={form.studentCount}
-                  onChange={(e) =>
-                    setForm((p) => ({ ...p, studentCount: Number(e.target.value || 0) }))
-                  }
                 />
               </label>
             </div>
