@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { mainApi } from "@/services";
+import { mainApi, setUserMetadata } from "@/services";
 import styles from "./page.module.css";
 
 export default function LoginPage() {
@@ -33,10 +33,10 @@ export default function LoginPage() {
       setEmailError("Please enter your Fulbright email.");
       return;
     }
-    if (!isFulbrightEmail(value)) {
-      setEmailError("Please use your Fulbright email.");
-      return;
-    }
+    // if (!isFulbrightEmail(value)) {
+    //   setEmailError("Please use your Fulbright email.");
+    //   return;
+    // }
     if (!password.trim()) {
       setPasswordError("Please enter your password.");
       return;
@@ -52,15 +52,35 @@ export default function LoginPage() {
         password: password.trim(),
       });
 
-      if (!response.success) {
+      if (!response?.accessToken) {
         setFormError("Invalid credentials.");
         return;
       }
 
-      const target = isStudentEmail(value) ? "/student/home" : "/prof/home";
+      const userRole = String(response.role ?? response.user?.role ?? "").toLowerCase();
+      const userId = response.userId || response.user?.id || "";
+      const userName = response.name || response.user?.name || value;
+
+      // Store user metadata for future usage
+      setUserMetadata({ id: userId, name: userName, role: userRole });
+      // console.log("User metadata stored:", { id: userId, name: userName, role: userRole });
+
+      const target =
+        userRole === "student"
+          ? "/student/home"
+          : userRole === "professor"
+          ? "/prof/home"
+          : isStudentEmail(value)
+          ? "/student/home"
+          : "/prof/home";
       router.push(target);
-    } catch {
-      setFormError("Unable to sign in right now. Please try again.");
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "";
+      if (message.includes("HTTP 401") || message.includes("HTTP 403")) {
+        setFormError("Invalid credentials.");
+      } else {
+        setFormError("Unable to sign in right now. Please try again.");
+      }
     } finally {
       setIsSubmitting(false);
     }

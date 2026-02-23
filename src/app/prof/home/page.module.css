@@ -56,11 +56,12 @@
 }
 
 .formGrid{
-  display:grid;
-  grid-template-columns: 1fr 1fr;
+  display:flex;
+  flex-direction:column;
   gap:14px;
   max-width:520px;
   margin:0 auto;
+  align-items:stretch;
 }
 
 .field{
@@ -69,6 +70,7 @@
   gap:6px;
   font-weight:700;
   color:rgba(0,25,110,.85);
+  text-align:left;
 }
 
 .field input{
@@ -119,6 +121,6 @@
 
 @media (max-width:900px){
   .formGrid{
-    grid-template-columns:1fr;
+    max-width:100%;
   }
 }

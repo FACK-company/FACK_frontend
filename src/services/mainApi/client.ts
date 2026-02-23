@@ -6,16 +6,14 @@ import type {
   AddProfessorCourseRequest,
   AddProfessorCourseStudentRequest,
   ProfessorCourse,
-  ProfessorCourseStudent,
-  ProfessorCourseStudentsResponse,
-  ProfessorCoursesResponse,
+  Student,
   ProfessorExamDetailsResponse,
   ProfessorExamSessionRow,
   ProfessorRecordingComment,
   ProfessorRecordingDetailResponse,
   ProfessorRecordingListItem,
   ProfessorRecordingsResponse,
-  ProfessorCourseExamsResponse,
+  // ProfessorCourseExamsResponse,
   ProfessorExamRow,
   LoginRequest,
   LoginResponse,
@@ -27,30 +25,30 @@ import type {
   StudentExamSummary,
   StudentProfileResponse,
 } from "@/types/api/main";
-import { fetchServer } from "./index";
+import { clearAccessToken, fetchServer, refreshAccessToken, setAccessToken } from "./index";
 
-const mainApiBaseUrl = process.env.NEXT_PUBLIC_MAIN_API_URL ?? "";
+const mainApiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL ?? "";
 
-// PLACEHOLDER ONLY: set to `false` when backend is running in production.
-const MOCK_SERVER_TRUE = true;
+// PLACEHOLDER ONLY: set to `true` when backend is unavailable.
+const MOCK_SERVER_TRUE = false;
 const PLACEHOLDERS = {
   professorCourses: [
     {
       id: "cs207",
-      title: "CS207 — Data Structures",
-      term: "Spring 2026",
+      name: "CS207 — Data Structures",
+      semester: "Spring 2026",
       studentCount: 42,
     },
     {
       id: "cs201",
-      title: "CS201 — Intro Programming",
-      term: "Spring 2026",
+      name: "CS201 — Intro Programming",
+      semester: "Spring 2026",
       studentCount: 68,
     },
     {
       id: "cs105",
-      title: "CS105 — Discrete Math",
-      term: "Spring 2026",
+      name: "CS105 — Discrete Math",
+      semester: "Spring 2026",
       studentCount: 55,
     },
   ] as ProfessorCourse[],
@@ -119,7 +117,7 @@ const PLACEHOLDERS = {
         { id: "final-exam", examName: "Final Exam", courseCode: "CS105", studentCount: 55 },
       ],
     },
-  } as Record<string, ProfessorCourseExamsResponse>,
+  } as Record<string, any>,
   studentsByCourseId: {
     cs207: [
       {
@@ -150,7 +148,7 @@ const PLACEHOLDERS = {
       },
     ],
     cs105: [],
-  } as Record<string, ProfessorCourseStudent[]>,
+  } as Record<string, Student[]>,
   examSessions: {
     "cs207:final-exam": [
       {
@@ -383,11 +381,66 @@ const PLACEHOLDERS = {
   },
 };
 
+type BackendMeResponse = {
+  id: string;
+  name: string;
+  email: string;
+  role?: string;
+};
+
+type BackendCourseResponse = {
+  id: string;
+  code: string;
+  name: string;
+  description?: string;
+  semester?: string;
+};
+
+type BackendExamResponse = {
+  id: string;
+  courseId: string;
+  title: string;
+  description?: string;
+  examFileUrl?: string;
+  durationMinutes?: number;
+  startAvailableAt?: string;
+  endAvailableAt?: string;
+};
+
+function formatMonthDayTime(dateLike?: string): { monthDay: string; time: string } {
+  if (!dateLike) return { monthDay: "-", time: "-" };
+  const d = new Date(dateLike);
+  if (Number.isNaN(d.getTime())) return { monthDay: "-", time: "-" };
+  const month = d.toLocaleString("en-US", { month: "short" });
+  const day = d.getDate();
+  const hh = String(d.getHours()).padStart(2, "0");
+  const mm = String(d.getMinutes()).padStart(2, "0");
+  return { monthDay: `${month} ${day}`, time: `${hh}:${mm}` };
+}
+
+function formatTimeWindow(start?: string, end?: string): string {
+  const s = formatMonthDayTime(start);
+  const e = formatMonthDayTime(end);
+  if (s.monthDay === "-" || e.monthDay === "-") return "-";
+  return `${s.monthDay}, ${s.time}-${e.time}`;
+}
+
+function toStudentExamStatus(start?: string, end?: string): StudentExamSummary["status"] {
+  if (!start || !end) return "Not started";
+  const now = Date.now();
+  const startMs = new Date(start).getTime();
+  const endMs = new Date(end).getTime();
+  if (Number.isNaN(startMs) || Number.isNaN(endMs)) return "Not started";
+  if (now < startMs) return "Not started";
+  if (now <= endMs) return "In progress";
+  return "Ended";
+}
+
 function buildPlaceholderExamDetails(courseId: string, examId: string): ProfessorExamDetailsResponse {
   const coursePayload =
     PLACEHOLDERS.examsByCourseId[courseId] ?? PLACEHOLDERS.examsByCourseId.cs207;
   const exam =
-    coursePayload.exams.find((item) => item.id === examId) ?? coursePayload.exams[0];
+    coursePayload.exams.find((item : any) => item.id === examId) ?? coursePayload.exams[0];
   const sessions =
     PLACEHOLDERS.examSessions[`${courseId}:${exam.id}`] ??
     PLACEHOLDERS.examSessions["cs207:final-exam"] ??
@@ -428,14 +481,37 @@ export const mainApi = {
       };
       return response;
     }
-
     const response = await fetchServer<LoginResponse>({
       path: "/auth/login",
       method: "POST",
       body: payload,
     });
+    if (response?.accessToken) {
+      setAccessToken(response.accessToken);
+    }
 
     return response;
+  },
+
+  async refreshAccessToken(): Promise<LoginResponse | null> {
+    const token = await refreshAccessToken(mainApiBaseUrl, Number(process.env.NEXT_PUBLIC_API_TIMEOUT ?? 30000));
+    if (!token) return null;
+    return { accessToken: token, tokenType: "Bearer" };
+  },
+
+  async logout(): Promise<void> {
+    try {
+      await fetchServer<void>({
+        path: "/auth/logout",
+        method: "POST",
+      });
+    } finally {
+      clearAccessToken();
+    }
+  },
+
+  async bootstrapAuth(): Promise<LoginResponse | null> {
+    return this.refreshAccessToken();
   },
 
   async getProfessorProfile(): Promise<ProfessorProfileResponse> {
@@ -444,11 +520,31 @@ export const mainApi = {
       return { username: "prof_username" };
     }
 
-    return fetchServer<ProfessorProfileResponse>({
-      baseUrl: mainApiBaseUrl,
-      path: "/prof/profile",
-      method: "GET",
-    });
+    try {
+      console.log("getProfessorProfile: Fetching from /auth/me...");
+
+      const me = await fetchServer<BackendMeResponse>({
+        baseUrl: mainApiBaseUrl,
+        path: "/auth/me",
+        method: "GET",
+      });
+      console.log("getProfessorProfile: Received response:", me);
+
+      if (!me) {
+        console.warn("getProfessorProfile: Backend returned null/undefined");
+        return { username: "prof_username" };
+      }
+
+      const username = me.name?.trim() || "prof_username";
+      console.log("getProfessorProfile: Resolved username to:", username);
+      return { username };
+    } catch (error) {
+      console.error(
+        "getProfessorProfile: Error fetching /auth/me:",
+        error instanceof Error ? error.message : String(error)
+      );
+      throw error;
+    }
   },
 
   async getStudentProfile(): Promise<StudentProfileResponse> {
@@ -458,9 +554,26 @@ export const mainApi = {
       return { username: PLACEHOLDERS.student.name };
     }
 
-    return fetchServer<StudentProfileResponse>({
+    const me = await fetchServer<BackendMeResponse>({
       baseUrl: mainApiBaseUrl,
-      path: "/student/profile",
+      path: "/auth/me",
+      method: "GET",
+    });
+    return { username: me.name || PLACEHOLDERS.student.name };
+  },
+
+  async getCourseById(courseId: string): Promise<ProfessorCourse> {
+    // PLACEHOLDER ONLY: remove this mock branch when course detail backend is ready.
+    if (MOCK_SERVER_TRUE) {
+      return (
+        PLACEHOLDERS.professorCourses.find((course) => course.id === courseId) ||
+        PLACEHOLDERS.professorCourses[0]
+      );
+    }
+
+    return fetchServer<ProfessorCourse>({
+      baseUrl: mainApiBaseUrl,
+      path: `/courses/${courseId}`,
       method: "GET",
     });
   },
@@ -471,11 +584,27 @@ export const mainApi = {
       return { courses: [...PLACEHOLDERS.student.courses] };
     }
 
-    return fetchServer<StudentCoursesResponse>({
+    const me = await fetchServer<BackendMeResponse>({
       baseUrl: mainApiBaseUrl,
-      path: "/student/courses",
+      path: "/auth/me",
       method: "GET",
     });
+
+    const courses = await fetchServer<BackendCourseResponse[]>({
+      baseUrl: mainApiBaseUrl,
+      path: `/course-enrollments/by-student/${me.id}`,
+      method: "GET",
+    });
+
+    return {
+      courses: (courses ?? []).map((course) => ({
+        id: course.id,
+        code: course.code || course.id,
+        name: course.name,
+        description: course.description || "",
+        semester: course.semester || "N/A",
+      })),
+    };
   },
 
   async getStudentCourseExams(courseId: string): Promise<StudentCourseExamsResponse> {
@@ -487,11 +616,24 @@ export const mainApi = {
       };
     }
 
-    return fetchServer<StudentCourseExamsResponse>({
+    const exams = await fetchServer<BackendExamResponse[]>({
       baseUrl: mainApiBaseUrl,
-      path: `/student/courses/${courseId}/exams`,
+      path: `/exams/by-course/${courseId}`,
       method: "GET",
     });
+
+    return {
+      courseId,
+      exams: (exams ?? []).map((exam) => ({
+        id: exam.id,
+        courseId: exam.courseId || courseId,
+        courseCode: (exam.courseId || courseId).toUpperCase(),
+        title: exam.title,
+        status: toStudentExamStatus(exam.startAvailableAt, exam.endAvailableAt),
+        timeWindow: formatTimeWindow(exam.startAvailableAt, exam.endAvailableAt),
+        durationMinutes: exam.durationMinutes || 0,
+      })),
+    };
   },
 
   async getStudentCurrentExam(): Promise<StudentCurrentExamResponse> {
@@ -504,11 +646,15 @@ export const mainApi = {
       return { exam: current };
     }
 
-    return fetchServer<StudentCurrentExamResponse>({
-      baseUrl: mainApiBaseUrl,
-      path: "/student/exams/current",
-      method: "GET",
-    });
+    const coursesResp = await this.getStudentCourses();
+    const examsByCourse = await Promise.all(
+      (coursesResp.courses || []).map((course) => this.getStudentCourseExams(course.id))
+    );
+    const currentExam =
+      examsByCourse
+        .flatMap((entry) => entry.exams)
+        .find((exam) => exam.status === "In progress") ?? null;
+    return { exam: currentExam };
   },
 
   async getStudentExamDetail(
@@ -535,56 +681,79 @@ export const mainApi = {
       };
     }
 
-    return fetchServer<StudentExamDetailResponse>({
+    const exam = await fetchServer<BackendExamResponse>({
       baseUrl: mainApiBaseUrl,
-      path: `/student/courses/${courseId}/exams/${examId}`,
+      path: `/exams/${examId}`,
       method: "GET",
     });
+
+    const normalizedCourseId = exam.courseId || courseId;
+    return {
+      id: exam.id,
+      courseId: normalizedCourseId,
+      courseCode: normalizedCourseId.toUpperCase(),
+      title: exam.title,
+      status: toStudentExamStatus(exam.startAvailableAt, exam.endAvailableAt),
+      timeWindow: formatTimeWindow(exam.startAvailableAt, exam.endAvailableAt),
+      durationMinutes: exam.durationMinutes || 0,
+      description: exam.description || "",
+      examFileUrl: exam.examFileUrl || "/files/CS201_Spring_2026_HW2.pdf",
+    };
   },
 
-  async getProfessorCourses(): Promise<ProfessorCoursesResponse> {
+  async getProfessorCourses(prof_id: string): Promise<ProfessorCourse[]> {
     // PLACEHOLDER ONLY: remove this mock branch when courses backend is ready.
-    if (MOCK_SERVER_TRUE) {
-      return { courses: [...PLACEHOLDERS.professorCourses] };
-    }
+    // if (MOCK_SERVER_TRUE) {
+    //   return { courses: [...PLACEHOLDERS.professorCourses] };
+    // }
 
-    return fetchServer<ProfessorCoursesResponse>({
-      baseUrl: mainApiBaseUrl,
-      path: "/prof/courses",
-      method: "GET",
-    });
+    try {
+      console.log("getProfessorCourses: Fetching from /prof/courses...");
+      const response = await fetchServer<ProfessorCourse[]>({
+        baseUrl: mainApiBaseUrl,
+        path: `/courses/professor/${prof_id}`,
+        method: "GET",
+      });
+      console.log("getProfessorCourses: Received response:", response);
+
+      return response;
+    } catch (error) {
+      console.error(
+        "getProfessorCourses: Error fetching /prof/courses:",
+        error instanceof Error ? error.message : String(error)
+      );
+      throw error;
+    }
   },
 
   async createProfessorCourse(payload: AddProfessorCourseRequest): Promise<ProfessorCourse> {
     // PLACEHOLDER ONLY: remove this mock branch when create-course backend is ready.
-    if (MOCK_SERVER_TRUE) {
-      return {
-        id: `${payload.courseCode.toLowerCase()}-${Date.now()}`,
-        title: `${payload.courseCode.toUpperCase()} — ${payload.courseName}`,
-        term: payload.term,
-        studentCount: payload.studentCount,
-      };
-    }
+    // if (MOCK_SERVER_TRUE) {
+    //   return {
+    //     id: `${payload.courseCode.toLowerCase()}-${Date.now()}`,
+    //     title: `${payload.courseCode.toUpperCase()} — ${payload.courseName}`,
+    //     term: payload.term,
+    //     studentCount: 0,
+    //   };
+    // }
 
     return fetchServer<ProfessorCourse>({
       baseUrl: mainApiBaseUrl,
-      path: "/prof/courses",
+      path: "/courses",
       method: "POST",
       body: payload,
     });
   },
 
-  async getCourseStudents(courseId: string): Promise<ProfessorCourseStudentsResponse> {
+  async getCourseStudents(courseId: string): Promise<Student[]> {
     // PLACEHOLDER ONLY: remove this mock branch when course-students backend is ready.
     if (MOCK_SERVER_TRUE) {
-      return {
-        students: [...(PLACEHOLDERS.studentsByCourseId[courseId] ?? [])],
-      };
+      return [...(PLACEHOLDERS.studentsByCourseId[courseId] ?? [])];
     }
 
-    return fetchServer<ProfessorCourseStudentsResponse>({
+    return fetchServer<Student[]>({
       baseUrl: mainApiBaseUrl,
-      path: `/prof/courses/${courseId}/students`,
+      path: `/course-enrollments/by-course/${courseId}`,
       method: "GET",
     });
   },
@@ -592,7 +761,7 @@ export const mainApi = {
   async addCourseStudent(
     courseId: string,
     payload: AddProfessorCourseStudentRequest
-  ): Promise<ProfessorCourseStudent> {
+  ): Promise<Student> {
     // PLACEHOLDER ONLY: remove this mock branch when add-student backend is ready.
     if (MOCK_SERVER_TRUE) {
       return {
@@ -603,7 +772,7 @@ export const mainApi = {
       };
     }
 
-    return fetchServer<ProfessorCourseStudent>({
+    return fetchServer<Student>({
       baseUrl: mainApiBaseUrl,
       path: `/prof/courses/${courseId}/students`,
       method: "POST",
@@ -614,20 +783,18 @@ export const mainApi = {
   async importCourseStudents(
     courseId: string,
     payload: AddProfessorCourseStudentRequest[]
-  ): Promise<ProfessorCourseStudentsResponse> {
+  ): Promise<Student[]> {
     // PLACEHOLDER ONLY: remove this mock branch when import-students backend is ready.
     if (MOCK_SERVER_TRUE) {
-      return {
-        students: payload.map((item, idx) => ({
-          id: `st-import-${Date.now()}-${idx}`,
-          firstName: item.firstName,
-          lastName: item.lastName,
-          email: item.email,
-        })),
-      };
+      return payload.map((item, idx) => ({
+        id: `st-import-${Date.now()}-${idx}`,
+        firstName: item.firstName,
+        lastName: item.lastName,
+        email: item.email,
+      }));
     }
 
-    return fetchServer<ProfessorCourseStudentsResponse>({
+    return fetchServer<Student[]>({
       baseUrl: mainApiBaseUrl,
       path: `/prof/courses/${courseId}/students/import`,
       method: "POST",
@@ -635,7 +802,7 @@ export const mainApi = {
     });
   },
 
-  async getCourseExams(courseId: string): Promise<ProfessorCourseExamsResponse> {
+  async getCourseExams(courseId: string): Promise<ProfessorExamRow[]> {
     // PLACEHOLDER ONLY: remove this mock branch when course-exams backend is ready.
     if (MOCK_SERVER_TRUE) {
       return (
@@ -643,9 +810,9 @@ export const mainApi = {
       );
     }
 
-    return fetchServer<ProfessorCourseExamsResponse>({
+    return fetchServer<ProfessorExamRow[]>({
       baseUrl: mainApiBaseUrl,
-      path: `/prof/courses/${courseId}/exams`,
+      path: `/exams/by-course/${courseId}`,
       method: "GET",
     });
   },
@@ -658,7 +825,7 @@ export const mainApi = {
     if (MOCK_SERVER_TRUE) {
       return {
         id: `${payload.title.toLowerCase().replace(/\s+/g, "-")}-${Date.now()}`,
-        examName: payload.title,
+        title: payload.title,
         courseCode: courseId.toUpperCase(),
         studentCount: 0,
       };
@@ -667,11 +834,11 @@ export const mainApi = {
     const formData = new FormData();
     formData.append("title", payload.title);
     formData.append("description", payload.description);
-    formData.append("duration_minutes", String(payload.durationMinutes));
-    formData.append("start_available_at", payload.startAvailableAt);
-    formData.append("end_available_at", payload.endAvailableAt);
+    formData.append("durationMinutes", String(payload.durationMinutes));
+    formData.append("startAvailableAt", payload.startAvailableAt);
+    formData.append("endAvailableAt", payload.endAvailableAt);
     if (payload.examFile) {
-      formData.append("exam_file", payload.examFile);
+      formData.append("examFileUrl", payload.examFile);
     }
 
     return fetchServer<ProfessorExamRow>({
@@ -679,6 +846,53 @@ export const mainApi = {
       path: `/prof/courses/${courseId}/exams`,
       method: "POST",
       body: formData,
+    });
+  },
+
+  async updateCourseExam(
+    courseId: string,
+    examId: string,
+    payload: AddProfessorExamRequest
+  ): Promise<void> {
+    // PLACEHOLDER ONLY: remove this mock branch when update-exam backend is ready.
+    if (MOCK_SERVER_TRUE) {
+      return;
+    }
+
+    const hasFile = Boolean(payload.examFile);
+
+    if (hasFile) {
+      const formData = new FormData();
+      formData.append("title", payload.title);
+      formData.append("description", payload.description);
+      formData.append("durationMinutes", String(payload.durationMinutes));
+      formData.append("startAvailableAt", payload.startAvailableAt);
+      formData.append("endAvailableAt", payload.endAvailableAt);
+      formData.append("examFileUrl", payload.examFile as File);
+      console.log('form data entries:');
+      formData.forEach((value, key) => {
+        console.log(`  ${key}:`, value instanceof File ? value.name : value);
+      });
+      await fetchServer<void>({
+        baseUrl: mainApiBaseUrl,
+        path: `/exams/${examId}`,
+        method: "PUT",
+        body: formData,
+      });
+      return;
+    }
+
+    await fetchServer<void>({
+      baseUrl: mainApiBaseUrl,
+      path: `/exams/${examId}`,
+      method: "PUT",
+      body: {
+        title: payload.title,
+        description: payload.description,
+        durationMinutes: payload.durationMinutes,
+        startAvailableAt: payload.startAvailableAt,
+        endAvailableAt: payload.endAvailableAt,
+      },
     });
   },
 
@@ -693,7 +907,7 @@ export const mainApi = {
 
     return fetchServer<ProfessorExamDetailsResponse>({
       baseUrl: mainApiBaseUrl,
-      path: `/prof/courses/${courseId}/exams/${examId}`,
+      path: `/exams/${examId}`,
       method: "GET",
     });
   },

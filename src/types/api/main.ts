@@ -6,11 +6,15 @@ export interface LoginRequest {
 }
 
 export interface LoginResponse {
-  success: boolean;
+  success?: boolean;
   accessToken?: string;
   refreshToken?: string;
   tokenType?: string;
   expiresIn?: number;
+  userId?: string;
+  email?: string;
+  name?: string;
+  role?: string;
   user?: LoginUser;
 }
 
@@ -28,33 +32,31 @@ export interface ProfessorProfileResponse {
 
 export interface ProfessorCourse {
   id: string;
-  title: string;
-  term: string;
-  studentCount: number;
-}
-
-export interface ProfessorCoursesResponse {
-  courses: ProfessorCourse[];
+  code: string;
+  name: string;
+  semester: string;
+  studentCount?: number;
 }
 
 export interface AddProfessorCourseRequest {
-  courseCode: string;
-  courseName: string;
-  term: string;
-  studentCount: number;
+  code: string;
+  name: string;
+  professorId: string;
+  semester: string;
 }
 
 export interface ProfessorExamRow {
   id: string;
-  examName: string;
+  title: string;
+  description?: string;
   courseCode: string;
   studentCount: number;
 }
 
-export interface ProfessorCourseExamsResponse {
-  courseTitle: string;
-  exams: ProfessorExamRow[];
-}
+// export interface ProfessorCourseExamsResponse {
+//   courseTitle: string;
+//   exams: ProfessorExamRow[];
+// }
 
 export interface AddProfessorExamRequest {
   title: string;
@@ -65,16 +67,15 @@ export interface AddProfessorExamRequest {
   endAvailableAt: string;
 }
 
-export interface ProfessorCourseStudent {
+export interface Student {
   id: string;
-  firstName: string;
-  lastName: string;
+  name?: string;
   email: string;
+  role?: string;
+  firstName?: string;
+  lastName?: string;
 }
 
-export interface ProfessorCourseStudentsResponse {
-  students: ProfessorCourseStudent[];
-}
 
 export interface AddProfessorCourseStudentRequest {
   firstName: string;

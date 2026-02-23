@@ -1,9 +1,12 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useSearchParams } from "next/navigation";
 import { mainApi } from "@/services";
-import type { ProfessorRecordingComment, ProfessorRecordingDetailResponse } from "@/types/api/main";
+import { getUserMetadata } from "@/services/mainApi/session";
+import type {
+  ProfessorRecordingComment,
+  ProfessorRecordingDetailResponse,
+} from "@/types/api/main";
 import styles from "./page.module.css";
 
 function formatSeconds(totalSec: number): string {
@@ -14,12 +17,17 @@ function formatSeconds(totalSec: number): string {
   return `${h}:${m}:${s}`;
 }
 
-export default function ProfRecordingViewPage() {
-  const params = useSearchParams();
-  const courseId = params.get("courseId") || "cs207";
-  const examId = params.get("examId") || "final-exam";
-  const sessionId = params.get("sessionId") || "s-1";
+type ProfRecordingViewClientProps = {
+  courseId: string;
+  examId: string;
+  sessionId: string;
+};
 
+export default function ProfRecordingViewClient({
+  courseId,
+  examId,
+  sessionId,
+}: ProfRecordingViewClientProps) {
   const [recording, setRecording] = useState<ProfessorRecordingDetailResponse | null>(null);
   const [comments, setComments] = useState<ProfessorRecordingComment[]>([]);
   const [commentText, setCommentText] = useState("");
@@ -52,24 +60,9 @@ export default function ProfRecordingViewPage() {
   }, [courseId, examId, sessionId]);
 
   useEffect(() => {
-    let isMounted = true;
-
-    async function loadUsername() {
-      try {
-        const profile = await mainApi.getProfessorProfile();
-        if (!isMounted) return;
-        setUsername(profile.username || "prof_username");
-      } catch {
-        if (!isMounted) return;
-        setUsername("prof_username");
-      }
-    }
-
-    loadUsername();
-
-    return () => {
-      isMounted = false;
-    };
+    const metadata = getUserMetadata();
+    // console.log("User metadata:", metadata);
+    setUsername(metadata?.name?.trim() || "prof_username");
   }, []);
 
   const sortedComments = useMemo(
@@ -138,7 +131,11 @@ export default function ProfRecordingViewPage() {
                     <div className="label">Exam name</div>
                     <div className="value">{recording.examTitle}</div>
                   </div>
-                  <span className={`badge ${recording.status === "Completed" ? "submitted" : "not-started"}`}>
+                  <span
+                    className={`badge ${
+                      recording.status === "Completed" ? "submitted" : "not-started"
+                    }`}
+                  >
                     {recording.status}
                   </span>
                 </div>
@@ -188,7 +185,7 @@ export default function ProfRecordingViewPage() {
                     <textarea
                       className={styles.commentInput}
                       value={commentText}
-                      onChange={(e) => setCommentText(e.target.value)}
+                      onChange={(event) => setCommentText(event.target.value)}
                       placeholder="Add a comment at the current video timestamp..."
                     />
                     <button
