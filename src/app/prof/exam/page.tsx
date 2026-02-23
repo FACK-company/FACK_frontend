@@ -1,59 +1,80 @@
 import { mainApi } from "@/services";
-import styles from "./page.module.css";
+import ProfExamClient from "./profExamClient";
+import type { ProfessorExamDetailsResponse } from "@/types/api/main";
 
-const DEFAULT_PROF_USERNAME = "prof_username";
+type ProfExamDetails = {
+  id: string;
+  courseId: string;
+  professorId: string;
+  title: string;
+  description: string;
+  durationMinutes: number;
+  startAvailableAt: string;
+  endAvailableAt: string;
+  examFileUrl: string;
+  recordingRequired: boolean;
+  createdAt: string;
+};
+
+function normalizeExamDetails(
+  payload: ProfessorExamDetailsResponse | ProfExamDetails,
+  courseId: string,
+  examId: string
+): ProfExamDetails {
+  const source = payload as Partial<ProfExamDetails> & Partial<ProfessorExamDetailsResponse>;
+
+  if (typeof source.title === "string") {
+    return {
+      id: source.id || examId,
+      courseId: source.courseId || courseId,
+      professorId: source.professorId || "",
+      title: source.title || "Exam",
+      description: source.description || "",
+      durationMinutes: Number(source.durationMinutes ?? 0),
+      startAvailableAt: source.startAvailableAt || "",
+      endAvailableAt: source.endAvailableAt || "",
+      examFileUrl: source.examFileUrl || "",
+      recordingRequired: Boolean(source.recordingRequired),
+      createdAt: source.createdAt || "",
+    };
+  }
+
+  return {
+    id: examId,
+    courseId,
+    professorId: "",
+    title: source.examTitle || "Exam",
+    description: "",
+    durationMinutes: 0,
+    startAvailableAt: "",
+    endAvailableAt: "",
+    examFileUrl: "",
+    recordingRequired: false,
+    createdAt: "",
+  };
+}
+
 // PLACEHOLDER START: fallback exam data while backend is unavailable.
-const DEFAULT_EXAM_DETAILS = {
-  examTitle: "Final Exam",
-  courseCode: "CS207",
-  totalStudents: 42,
-  completedRecordings: 38,
-  interruptedRecordings: 3,
-  missingRecordings: 1,
-  sessions: [
-    {
-      id: "s-1",
-      studentName: "Nguyen Minh",
-      recordingStatus: "Completed",
-      startTime: "08:00:00",
-      endTime: "09:28:14",
-      duration: "01:28:14",
-      interruptions: "0",
-    },
-    {
-      id: "s-2",
-      studentName: "Tran Anh",
-      recordingStatus: "Interrupted",
-      startTime: "08:03:10",
-      endTime: "08:55:53",
-      duration: "00:52:43",
-      interruptions: "2",
-    },
-    {
-      id: "s-3",
-      studentName: "Le Khoa",
-      recordingStatus: "Missing",
-      startTime: "-",
-      endTime: "-",
-      duration: "-",
-      interruptions: "-",
-    },
-  ],
+const DEFAULT_EXAM_DETAILS: ProfExamDetails = {
+  id: "336cb68e-ec3d-4d69-a470-bf87299321b6",
+  courseId: "a66833c2-718e-4364-b808-cdaa3869501c",
+  professorId: "8e218b8d-5388-468a-9f2d-473172014e74",
+  title: "Midterm Exam - Data Structures",
+  description:
+    "Comprehensive exam covering arrays, linked lists, trees, and graphs",
+  durationMinutes: 120,
+  startAvailableAt: "2024-03-15T09:00:00",
+  endAvailableAt: "2024-03-15T11:30:00",
+  examFileUrl: "https://storage.example.com/exams/midterm_ds.pdf",
+  recordingRequired: true,
+  createdAt: "2026-02-23T11:47:31",
 };
 // PLACEHOLDER END
 
-async function getProfessorUsername(): Promise<string> {
-  try {
-    const profile = await mainApi.getProfessorProfile();
-    return profile.username || DEFAULT_PROF_USERNAME;
-  } catch {
-    return DEFAULT_PROF_USERNAME;
-  }
-}
-
 async function getExamDetails(courseId: string, examId: string) {
   try {
-    return await mainApi.getExamDetails(courseId, examId);
+    const response = await mainApi.getExamDetails(courseId, examId);
+    return normalizeExamDetails(response, courseId, examId);
   } catch {
     return DEFAULT_EXAM_DETAILS;
   }
@@ -70,88 +91,11 @@ export default async function ProfExam({ searchParams }: ProfExamPageProps) {
   const resolvedSearchParams = searchParams ? await searchParams : undefined;
   const courseId = resolvedSearchParams?.courseId || "cs207";
   const examId = resolvedSearchParams?.examId || "final-exam";
-  const username = await getProfessorUsername();
   const examDetails = await getExamDetails(courseId, examId);
 
   return (
-    <div className={`page ${styles.pageBg}`}>
-      <header className="nav">
-        <a className="brand" href="/prof/home">
-          Fulbright AntiCheat Knight
-        </a>
-        <nav className="nav-links">
-          <a href="/prof/home">Home</a>
-          <a href="/prof/recordings">Recordings</a>
-        </nav>
-        <div className="user">
-          <span className="user-name">{username}</span>
-          <span className="avatar" aria-hidden="true"></span>
-        </div>
-      </header>
-
-      <main className="main">
-        <section className="frame">
-          <div className="page-title">
-            Exam — {examDetails.courseCode} {examDetails.examTitle}
-          </div>
-          <div className="stats">
-            <div className="stat-card">
-              <div className="stat-label">Total students</div>
-              <div className="stat-value">{examDetails.totalStudents}</div>
-            </div>
-            <div className="stat-card">
-              <div className="stat-label">Completed recordings</div>
-              <div className="stat-value">{examDetails.completedRecordings}</div>
-            </div>
-            <div className="stat-card">
-              <div className="stat-label">Interrupted recordings</div>
-              <div className="stat-value">{examDetails.interruptedRecordings}</div>
-            </div>
-            <div className="stat-card">
-              <div className="stat-label">Missing recordings</div>
-              <div className="stat-value">{examDetails.missingRecordings}</div>
-            </div>
-          </div>
-
-          <div className={`table table-5 ${styles.examTable}`}>
-            <div className={`table-head ${styles.examTableHead}`}>
-              <div>Student name</div>
-              <div>Recording status</div>
-              <div>Start time</div>
-              <div>End time</div>
-              <div>Duration</div>
-              <div>Interruptions</div>
-              <div></div>
-            </div>
-            {examDetails.sessions.map((session) => (
-              <div className={`table-row ${styles.examTableRow}`} key={session.id}>
-                <div className="strong">{session.studentName}</div>
-                <div
-                  className={`status-pill ${
-                    session.recordingStatus === "Completed"
-                      ? "complete"
-                      : session.recordingStatus === "Interrupted"
-                      ? "interrupted"
-                      : "missing"
-                  }`}
-                >
-                  {session.recordingStatus}
-                </div>
-                <div>{session.startTime}</div>
-                <div>{session.endTime}</div>
-                <div>{session.duration}</div>
-                <div>{session.interruptions}</div>
-                <a
-                  className={`primary-btn ${styles.viewBtn}`}
-                  href={`/prof/recordings/view?courseId=${courseId}&examId=${examId}&sessionId=${session.id}`}
-                >
-                  View
-                </a>
-              </div>
-            ))}
-          </div>
-        </section>
-      </main>
-    </div>
+    <ProfExamClient
+      examDetails={examDetails}
+    />
   );
 }

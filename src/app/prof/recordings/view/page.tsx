@@ -1,3 +1,3 @@
-import ProfRecordingViewPage from "@/app/prof/view/page";
+import ProfRecordingViewPage from "@/app/prof/exam/view/page";
 
 export default ProfRecordingViewPage;

@@ -834,11 +834,11 @@ export const mainApi = {
     const formData = new FormData();
     formData.append("title", payload.title);
     formData.append("description", payload.description);
-    formData.append("duration_minutes", String(payload.durationMinutes));
-    formData.append("start_available_at", payload.startAvailableAt);
-    formData.append("end_available_at", payload.endAvailableAt);
+    formData.append("durationMinutes", String(payload.durationMinutes));
+    formData.append("startAvailableAt", payload.startAvailableAt);
+    formData.append("endAvailableAt", payload.endAvailableAt);
     if (payload.examFile) {
-      formData.append("exam_file", payload.examFile);
+      formData.append("examFileUrl", payload.examFile);
     }
 
     return fetchServer<ProfessorExamRow>({
@@ -846,6 +846,53 @@ export const mainApi = {
       path: `/prof/courses/${courseId}/exams`,
       method: "POST",
       body: formData,
+    });
+  },
+
+  async updateCourseExam(
+    courseId: string,
+    examId: string,
+    payload: AddProfessorExamRequest
+  ): Promise<void> {
+    // PLACEHOLDER ONLY: remove this mock branch when update-exam backend is ready.
+    if (MOCK_SERVER_TRUE) {
+      return;
+    }
+
+    const hasFile = Boolean(payload.examFile);
+
+    if (hasFile) {
+      const formData = new FormData();
+      formData.append("title", payload.title);
+      formData.append("description", payload.description);
+      formData.append("durationMinutes", String(payload.durationMinutes));
+      formData.append("startAvailableAt", payload.startAvailableAt);
+      formData.append("endAvailableAt", payload.endAvailableAt);
+      formData.append("examFileUrl", payload.examFile as File);
+      console.log('form data entries:');
+      formData.forEach((value, key) => {
+        console.log(`  ${key}:`, value instanceof File ? value.name : value);
+      });
+      await fetchServer<void>({
+        baseUrl: mainApiBaseUrl,
+        path: `/exams/${examId}`,
+        method: "PUT",
+        body: formData,
+      });
+      return;
+    }
+
+    await fetchServer<void>({
+      baseUrl: mainApiBaseUrl,
+      path: `/exams/${examId}`,
+      method: "PUT",
+      body: {
+        title: payload.title,
+        description: payload.description,
+        durationMinutes: payload.durationMinutes,
+        startAvailableAt: payload.startAvailableAt,
+        endAvailableAt: payload.endAvailableAt,
+      },
     });
   },
 
@@ -860,7 +907,7 @@ export const mainApi = {
 
     return fetchServer<ProfessorExamDetailsResponse>({
       baseUrl: mainApiBaseUrl,
-      path: `/prof/courses/${courseId}/exams/${examId}`,
+      path: `/exams/${examId}`,
       method: "GET",
     });
   },
