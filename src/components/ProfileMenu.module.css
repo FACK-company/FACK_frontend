@@ -1,0 +1,65 @@
+.wrapper{
+  position:relative;
+  justify-self:end;
+}
+
+.trigger{
+  display:flex;
+  align-items:center;
+  gap:14px;
+  font-weight:800;
+  font-size:16px;
+  border:none;
+  background:transparent;
+  color:inherit;
+  cursor:pointer;
+  padding:0;
+}
+
+.dropdown{
+  position:absolute;
+  right:0;
+  top:calc(100% + 10px);
+  min-width:180px;
+  border:1px solid rgba(0,25,110,.16);
+  border-radius:12px;
+  background:#fff;
+  box-shadow:0 14px 30px rgba(0,0,0,.12);
+  padding:10px;
+  z-index:30;
+}
+
+.statusRow{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  font-size:13px;
+  font-weight:700;
+  color:rgba(0,25,110,.8);
+  padding:6px 8px 10px;
+  border-bottom:1px solid rgba(0,25,110,.08);
+}
+
+.statusDot{
+  width:8px;
+  height:8px;
+  border-radius:999px;
+  background:#22c55e;
+}
+
+.logoutBtn{
+  width:100%;
+  margin-top:8px;
+  height:38px;
+  border-radius:10px;
+  border:1px solid rgba(220,38,38,.35);
+  background:rgba(220,38,38,.1);
+  color:#b91c1c;
+  font-weight:800;
+  cursor:pointer;
+}
+
+.logoutBtn:disabled{
+  opacity:.7;
+  cursor:not-allowed;
+}

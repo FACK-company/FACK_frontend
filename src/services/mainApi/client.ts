@@ -592,7 +592,7 @@ export const mainApi = {
 
     const courses = await fetchServer<BackendCourseResponse[]>({
       baseUrl: mainApiBaseUrl,
-      path: `/course-enrollments/by-student/${me.id}`,
+      path: `/students/${me.id}/courses`,
       method: "GET",
     });
 
@@ -646,15 +646,32 @@ export const mainApi = {
       return { exam: current };
     }
 
-    const coursesResp = await this.getStudentCourses();
-    const examsByCourse = await Promise.all(
-      (coursesResp.courses || []).map((course) => this.getStudentCourseExams(course.id))
-    );
-    const currentExam =
-      examsByCourse
-        .flatMap((entry) => entry.exams)
-        .find((exam) => exam.status === "In progress") ?? null;
-    return { exam: currentExam };
+    const me = await fetchServer<BackendMeResponse>({
+      baseUrl: mainApiBaseUrl,
+      path: "/auth/me",
+      method: "GET",
+    });
+
+    try {
+      const exam = await fetchServer<BackendExamResponse>({
+        baseUrl: mainApiBaseUrl,
+        path: `/students/${me.id}/exams/current`,
+        method: "GET",
+      });
+      return {
+        exam: {
+          id: exam.id,
+          courseId: exam.courseId,
+          courseCode: exam.courseId.toUpperCase(),
+          title: exam.title,
+          status: toStudentExamStatus(exam.startAvailableAt, exam.endAvailableAt),
+          timeWindow: formatTimeWindow(exam.startAvailableAt, exam.endAvailableAt),
+          durationMinutes: exam.durationMinutes || 0,
+        },
+      };
+    } catch {
+      return { exam: null };
+    }
   },
 
   async getStudentExamDetail(

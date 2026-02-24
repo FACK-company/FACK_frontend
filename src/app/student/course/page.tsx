@@ -1,26 +1,55 @@
+"use client";
+
+import { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { mainApi } from "@/services";
+import ProfileMenu from "@/components/ProfileMenu";
 import styles from "./page.module.css";
+import type { StudentCourse, StudentExamSummary } from "@/types/api/main";
 
-type StudentCoursePageProps = {
-  searchParams?: Promise<{
-    courseId?: string;
-  }>;
-};
+export default function StudentCoursePage() {
+  const searchParams = useSearchParams();
+  const courseId = useMemo(() => searchParams.get("courseId") || "CS207", [searchParams]);
 
-export default async function StudentCoursePage({ searchParams }: StudentCoursePageProps) {
-  const resolvedSearchParams = searchParams ? await searchParams : undefined;
-  const courseId = resolvedSearchParams?.courseId || "cs207";
+  const [username, setUsername] = useState("student_name");
+  const [courses, setCourses] = useState<StudentCourse[]>([]);
+  const [exams, setExams] = useState<StudentExamSummary[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const [profile, coursesResp, courseExamsResp] = await Promise.all([
-    mainApi.getStudentProfile(),
-    mainApi.getStudentCourses(),
-    mainApi.getStudentCourseExams(courseId),
-  ]);
+  useEffect(() => {
+    let mounted = true;
 
-  const username = profile.username || "student_name";
-  const exams = courseExamsResp.exams || [];
-  const course = (coursesResp.courses || []).find((item) => item.id === courseId);
-  const courseTitle = course ? `${course.code} — ${course.name}` : "Course Exams";
+    async function load() {
+      setLoading(true);
+      try {
+        const [profile, coursesResp, examsResp] = await Promise.all([
+          mainApi.getStudentProfile(),
+          mainApi.getStudentCourses(),
+          mainApi.getStudentCourseExams(courseId),
+        ]);
+
+        if (!mounted) return;
+        setUsername(profile.username || "student_name");
+        setCourses(coursesResp.courses || []);
+        setExams(examsResp.exams || []);
+      } catch {
+        if (!mounted) return;
+        setUsername("student_name");
+        setCourses([]);
+        setExams([]);
+      } finally {
+        if (mounted) setLoading(false);
+      }
+    }
+
+    load();
+    return () => {
+      mounted = false;
+    };
+  }, [courseId]);
+
+  const course = courses.find((item) => item.id === courseId);
+  const courseTitle = course ? `${course.code} - ${course.name}` : "Course Exams";
 
   return (
     <div className={`page ${styles.pageBg}`}>
@@ -29,58 +58,57 @@ export default async function StudentCoursePage({ searchParams }: StudentCourseP
           Fulbright AntiCheat Knight
         </a>
         <nav className="nav-links" aria-hidden="true"></nav>
-        <div className="user">
-          <span className="user-name">{username}</span>
-          <span className="avatar" aria-hidden="true"></span>
-        </div>
+        <ProfileMenu username={username} />
       </header>
 
       <main className="main">
         <section className="frame">
           <div className={styles.pageTitle}>{courseTitle}</div>
           <div className={styles.list}>
-            {exams.map((exam) => (
-              <article className={styles.examCard} key={exam.id}>
-                <div className={styles.examRow}>
-                  <div>
-                    <div className={styles.label}>Exam name</div>
-                    <div className={styles.value}>{exam.title}</div>
-                  </div>
-                  <span
-                    className={`${styles.badge} ${
-                      exam.status === "In progress"
-                        ? styles.inProgress
-                        : exam.status === "Submitted"
-                        ? styles.submitted
-                        : exam.status === "Ended"
-                        ? styles.ended
-                        : styles.notStarted
-                    }`}
-                  >
-                    {exam.status}
-                  </span>
-                </div>
-                <div className={styles.examGrid}>
-                  <div>
-                    <div className={styles.label}>Course</div>
-                    <div className={styles.value}>{exam.courseCode}</div>
-                  </div>
-                  <div>
-                    <div className={styles.label}>Time window</div>
-                    <div className={styles.value}>{exam.timeWindow}</div>
-                  </div>
-                  <div className={styles.cta}>
-                    <a
-                      className={`primary-btn ${styles.enterBtn}`}
-                      href={`/student/record?courseId=${exam.courseId}&examId=${exam.id}`}
+            {loading && <div className={styles.empty}>Loading exams...</div>}
+            {!loading &&
+              exams.map((exam) => (
+                <article className={styles.examCard} key={exam.id}>
+                  <div className={styles.examRow}>
+                    <div>
+                      <div className={styles.label}>Exam name</div>
+                      <div className={styles.value}>{exam.title}</div>
+                    </div>
+                    <span
+                      className={`${styles.badge} ${
+                        exam.status === "In progress"
+                          ? styles.inProgress
+                          : exam.status === "Submitted"
+                          ? styles.submitted
+                          : exam.status === "Ended"
+                          ? styles.ended
+                          : styles.notStarted
+                      }`}
                     >
-                      {exam.status === "Not started" ? "Preview" : "Enter Exam"}
-                    </a>
+                      {exam.status}
+                    </span>
                   </div>
-                </div>
-              </article>
-            ))}
-            {!exams.length && <div className={styles.empty}>No exams available.</div>}
+                  <div className={styles.examGrid}>
+                    <div>
+                      <div className={styles.label}>Course</div>
+                      <div className={styles.value}>{exam.courseCode}</div>
+                    </div>
+                    <div>
+                      <div className={styles.label}>Time window</div>
+                      <div className={styles.value}>{exam.timeWindow}</div>
+                    </div>
+                    <div className={styles.cta}>
+                      <a
+                        className={`primary-btn ${styles.enterBtn}`}
+                        href={`/student/record?courseId=${exam.courseId}&examId=${exam.id}`}
+                      >
+                        {exam.status === "Not started" ? "Preview" : "Enter Exam"}
+                      </a>
+                    </div>
+                  </div>
+                </article>
+              ))}
+            {!loading && !exams.length && <div className={styles.empty}>No exams available.</div>}
           </div>
         </section>
       </main>

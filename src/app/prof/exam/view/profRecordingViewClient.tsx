@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { mainApi } from "@/services";
 import { getUserMetadata } from "@/services/mainApi/session";
+import ProfileMenu from "@/components/ProfileMenu";
 import type {
   ProfessorRecordingComment,
   ProfessorRecordingDetailResponse,
@@ -108,10 +109,7 @@ export default function ProfRecordingViewClient({
           <a href="/prof/home">Home</a>
           <a href="/prof/recordings">Recordings</a>
         </nav>
-        <div className="user">
-          <span className="user-name">{username}</span>
-          <span className="avatar" aria-hidden="true"></span>
-        </div>
+        <ProfileMenu username={username} />
       </header>
 
       <main className="main">

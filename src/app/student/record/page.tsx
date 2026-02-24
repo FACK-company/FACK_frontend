@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { mainApi } from "@/services";
+import ProfileMenu from "@/components/ProfileMenu";
 import type { StudentExamDetailResponse } from "@/types/api/main";
 import styles from "./page.module.css";
 
@@ -121,10 +122,7 @@ export default function StudentRecordPage() {
             Fulbright AntiCheat Knight
           </a>
           <nav className="nav-links" aria-hidden="true"></nav>
-          <div className="user">
-            <span className="user-name">{username}</span>
-            <span className="avatar" aria-hidden="true"></span>
-          </div>
+          <ProfileMenu username={username} />
         </header>
       )}
 

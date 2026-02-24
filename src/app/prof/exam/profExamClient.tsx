@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import styles from "./page.module.css";
 import { getUserMetadata } from "@/services/mainApi/session";
 import { mainApi } from "@/services";
+import ProfileMenu from "@/components/ProfileMenu";
 import type { AddProfessorExamRequest, ProfessorRecordingListItem } from "@/types/api/main";
 
 type ProfExamDetails = {
@@ -196,10 +197,7 @@ export default function ProfExamClient({
           <a href="/prof/home">Home</a>
           <a href="/prof/recordings">Recordings</a>
         </nav>
-        <div className="user">
-          <span className="user-name">{username}</span>
-          <span className="avatar" aria-hidden="true"></span>
-        </div>
+        <ProfileMenu username={username} />
       </header>
 
       <main className="main">

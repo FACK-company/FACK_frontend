@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { mainApi } from "@/services";
+import ProfileMenu from "@/components/ProfileMenu";
 import type { ProfessorRecordingListItem } from "@/types/api/main";
 import styles from "./page.module.css";
 
@@ -69,10 +70,7 @@ export default function ProfRecordings() {
           <a href="/prof/home">Home</a>
           <a className="active" href="/prof/recordings">Recordings</a>
         </nav>
-        <div className="user">
-          <span className="user-name">{username}</span>
-          <span className="avatar" aria-hidden="true"></span>
-        </div>
+        <ProfileMenu username={username} />
       </header>
 
       <main className="main">
