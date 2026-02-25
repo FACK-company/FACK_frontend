@@ -24,6 +24,7 @@ import type {
   StudentExamDetailResponse,
   StudentExamSummary,
   StudentProfileResponse,
+  ExamSession,
 } from "@/types/api/main";
 import {
   clearAccessToken,
@@ -991,6 +992,26 @@ export const mainApi = {
       path: "/prof/recordings",
       method: "GET",
     });
+  },
+
+  async getExamSessions(examId: string): Promise<ExamSession[]> {
+    return fetchServer<ExamSession[]>({
+      baseUrl: mainApiBaseUrl,
+      path: `/exam-sessions/by-exam/${examId}`,
+      method: "GET",
+    });
+  },
+
+  async getExamSessionMetadata(sessionId: string): Promise<ExamSession> {
+    return fetchServer<ExamSession>({
+      baseUrl: mainApiBaseUrl,
+      path: `/exam-sessions/${sessionId}`,
+      method: "GET",
+    });
+  },
+
+  getSessionRecordingUrl(sessionId: string): string {
+    return `${mainApiBaseUrl}/recordings/by-session/${sessionId}`;
   },
 
   async addRecordingComment(

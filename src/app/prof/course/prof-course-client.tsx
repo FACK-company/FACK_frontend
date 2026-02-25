@@ -15,11 +15,7 @@ import styles from "./page.module.css";
 const DEFAULT_PROF_USERNAME = "prof_username";
 
 type ProfCourseClientProps = {
-  courseData: ProfessorCourse;
-  initialCourseTitle: string;
-  initialStudents: Student[];
-  initialExams: ProfessorExamRow[];
-  initialError?: string;
+  courseId: string;
 };
 
 function parseCsvRows(csvText: string): AddProfessorCourseStudentRequest[] {
@@ -49,17 +45,15 @@ function parseCsvRows(csvText: string): AddProfessorCourseStudentRequest[] {
 }
 
 export default function ProfCourseClient({
-  courseData,
-  initialCourseTitle,
-  initialStudents,
-  initialExams,
-  initialError = "",
+  courseId,
 }: ProfCourseClientProps) {
   const [username, setUsername] = useState(DEFAULT_PROF_USERNAME);
-  const [courseTitle] = useState(initialCourseTitle);
-  const [students, setStudents] = useState<Student[]>(initialStudents);
-  const [exams, setExams] = useState<ProfessorExamRow[]>(initialExams);
-  const [error, setError] = useState(initialError);
+  const [courseData, setCourseData] = useState<ProfessorCourse | null>(null);
+  const [courseTitle, setCourseTitle] = useState("Course");
+  const [students, setStudents] = useState<Student[]>([]);
+  const [exams, setExams] = useState<ProfessorExamRow[]>([]);
+  const [error, setError] = useState("");
+  const [isLoading, setIsLoading] = useState(true);
 
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
@@ -86,6 +80,45 @@ export default function ProfCourseClient({
     setUsername(userMetadata?.name?.trim() || DEFAULT_PROF_USERNAME);
   }, []);
 
+  useEffect(() => {
+    let active = true;
+
+    async function loadCourseData() {
+      setIsLoading(true);
+      setError("");
+      try {
+        const [courseResp, examsResp, studentsResp] = await Promise.all([
+          mainApi.getCourseById(courseId),
+          mainApi.getCourseExams(courseId),
+          mainApi.getCourseStudents(courseId),
+        ]);
+
+        console.log("Loaded course data: ", { courseResp, examsResp, studentsResp });
+
+        if (!active) return;
+
+        setCourseData(courseResp);
+        setCourseTitle(courseResp?.name || "Course");
+        setExams(examsResp || []);
+        setStudents(studentsResp || []);
+      } catch (loadError) {
+        if (!active) return;
+        console.error("Error loading course page data:", loadError);
+        setError("Unable to load course data.");
+      } finally {
+        if (active) setIsLoading(false);
+      }
+    }
+
+    void loadCourseData();
+
+    return () => {
+      active = false;
+    };
+  }, [courseId]);
+
+  const effectiveCourseId = courseData?.id || courseId;
+
   // const sortedStudents = useMemo(
   //   () => [...students].sort((a, b) => a.lastName.localeCompare(b.lastName)),
   //   [students]
@@ -107,7 +140,7 @@ export default function ProfCourseClient({
     setIsAddingStudent(true);
     setError("");
     try {
-      const created = await mainApi.addCourseStudent(courseData.id, payload);
+      const created = await mainApi.addCourseStudent(effectiveCourseId, payload);
       setStudents((prev) => [created, ...prev]);
       setFirstName("");
       setLastName("");
@@ -133,7 +166,7 @@ export default function ProfCourseClient({
         return;
       }
 
-      const imported = await mainApi.importCourseStudents(courseData.id, rows);
+      const imported = await mainApi.importCourseStudents(effectiveCourseId, rows);
       setStudents((prev) => [...imported, ...prev]);
     } catch {
       setError("Unable to import CSV.");
@@ -169,7 +202,7 @@ export default function ProfCourseClient({
     setIsCreatingExam(true);
     setError("");
     try {
-      const created = await mainApi.createCourseExam(courseData.id, payload);
+      const created = await mainApi.createCourseExam(effectiveCourseId, payload);
       setExams((prev) => [created, ...prev]);
       setOpenExamModal(false);
       setExamForm({
@@ -195,6 +228,7 @@ export default function ProfCourseClient({
         <section className="frame">
           <div className="page-title">Course — {courseTitle}</div>
           {error && <div className={styles.errorText}>{error}</div>}
+          {isLoading && <div className={styles.empty}>Loading course data...</div>}
 
           <div className={styles.layout}>
             <section className={styles.examPanel}>
@@ -220,7 +254,7 @@ export default function ProfCourseClient({
                     <div>{exam.description || "—"}</div>
                     <a
                       className={`primary-btn ${styles.viewExamBtn}`}
-                      href={`/prof/exam?courseId=${courseData.id}&examId=${exam.id}`}
+                      href={`/prof/exam?courseId=${effectiveCourseId}&examId=${exam.id}`}
                     >
                       View Exam
                     </a>

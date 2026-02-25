@@ -145,6 +145,29 @@ export interface ProfessorRecordingsResponse {
   recordings: ProfessorRecordingListItem[];
 }
 
+export interface ExamSessionStudent {
+  id: string;
+  name: string;
+  email: string;
+  role: string;
+  status: string;
+}
+
+export interface ExamSession {
+  id: string;
+  examId: string;
+  studentId: string;
+  startTime: string;
+  endTime: string | null;
+  status: string;
+  screenRecordingPath: string | null;
+  ipAddress: string | null;
+  deviceInfo: string | null;
+  browserInfo: string | null;
+  createdAt: string;
+  student: ExamSessionStudent;
+}
+
 export interface StudentProfileResponse {
   username: string;
 }
