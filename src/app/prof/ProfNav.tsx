@@ -15,9 +15,9 @@ export default function ProfNav({ username, active }: ProfNavProps) {
         <a className={active === "home" ? "active" : undefined} href="/prof/home">
           Home
         </a>
-        <a className={active === "recordings" ? "active" : undefined} href="/prof/recordings">
+        {/* <a className={active === "recordings" ? "active" : undefined} href="/prof/recordings">
           Recordings
-        </a>
+        </a> */}
       </nav>
       <ProfileMenu username={username} />
     </header>
