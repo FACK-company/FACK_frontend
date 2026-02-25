@@ -288,7 +288,7 @@ export default function ProfExamClient({
         </a>
         <nav className="nav-links">
           <a href="/prof/home">Home</a>
-          <a href="/prof/recordings">Recordings</a>
+          {/* <a href="/prof/recordings">Recordings</a> */}
         </nav>
         <ProfileMenu username={username} />
       </header>
