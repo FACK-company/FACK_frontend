@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { mainApi } from "@/services";
-import ProfileMenu from "@/components/ProfileMenu";
+import StudentNav from "../StudentNav";
 import styles from "./page.module.css";
 
 const DEFAULT_USERNAME = "student_name";
@@ -41,13 +41,7 @@ export default function StudentHomePage() {
 
   return (
     <div className="page bg-grad">
-      <header className="nav">
-        <a className="brand" href="/student/home">
-          Fulbright AntiCheat Knight
-        </a>
-        <nav className="nav-links" aria-hidden="true"></nav>
-        <ProfileMenu username={username} />
-      </header>
+      <StudentNav username={username} />
 
       <main className="main">
         <div className="welcome">

@@ -72,7 +72,7 @@ export default function AuthBootstrap() {
 
       const role = (currentMetadata.role || tokenRole || "").toLowerCase();
 
-      if (pathname === "/login") {
+      if (pathname === "/login" || pathname === "/about") {
         router.replace(role === "professor" ? "/prof/home" : "/student/home");
         return;
       }

@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { mainApi } from "@/services";
 import { getUserMetadata } from "@/services/mainApi/session";
-import ProfileMenu from "@/components/ProfileMenu";
+import ProfNav from "../../ProfNav";
 import type {
   ProfessorRecordingComment,
   ProfessorRecordingDetailResponse,
@@ -134,16 +134,7 @@ export default function ProfRecordingViewClient({
 
   return (
     <div className={`page ${styles.pageBg}`}>
-      <header className="nav">
-        <a className="brand" href="/prof/home">
-          Fulbright AntiCheat Knight
-        </a>
-        <nav className="nav-links">
-          <a href="/prof/home">Home</a>
-          {/* <a href="/prof/recordings">Recordings</a> */}
-        </nav>
-        <ProfileMenu username={username} />
-      </header>
+      <ProfNav username={username} />
 
       <main className="main">
         <section className="frame">

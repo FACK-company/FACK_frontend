@@ -26,7 +26,15 @@ import type {
   StudentProfileResponse,
   ExamSession,
 } from "@/types/api/main";
-import { clearAccessToken, fetchServer, refreshAccessToken, setAccessToken } from "./index";
+import {
+  clearAccessToken,
+  clearUserMetadata,
+  fetchServer,
+  getUserMetadata,
+  refreshAccessToken,
+  setAccessToken,
+  setUserMetadata,
+} from "./index";
 
 const mainApiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL ?? "";
 
@@ -408,6 +416,22 @@ type BackendExamResponse = {
   endAvailableAt?: string;
 };
 
+type UploadRecordingChunkPayload = {
+  sessionId: string;
+  examId: string;
+  studentId: string;
+  index: number;
+  chunk: Blob;
+  deviceInfo?: string;
+};
+
+type FinalizeRecordingPayload = {
+  sessionId: string;
+  examId: string;
+  studentId: string;
+  deviceInfo?: string;
+};
+
 function formatMonthDayTime(dateLike?: string): { monthDay: string; time: string } {
   if (!dateLike) return { monthDay: "-", time: "-" };
   const d = new Date(dateLike);
@@ -490,6 +514,11 @@ export const mainApi = {
     if (response?.accessToken) {
       setAccessToken(response.accessToken);
     }
+    setUserMetadata({
+      id: response.userId || response.user?.id,
+      name: response.name || response.user?.name,
+      role: response.role || response.user?.role,
+    });
 
     return response;
   },
@@ -508,6 +537,7 @@ export const mainApi = {
       });
     } finally {
       clearAccessToken();
+      clearUserMetadata();
     }
   },
 
@@ -521,31 +551,8 @@ export const mainApi = {
       return { username: "prof_username" };
     }
 
-    try {
-      console.log("getProfessorProfile: Fetching from /auth/me...");
-
-      const me = await fetchServer<BackendMeResponse>({
-        baseUrl: mainApiBaseUrl,
-        path: "/auth/me",
-        method: "GET",
-      });
-      console.log("getProfessorProfile: Received response:", me);
-
-      if (!me) {
-        console.warn("getProfessorProfile: Backend returned null/undefined");
-        return { username: "prof_username" };
-      }
-
-      const username = me.name?.trim() || "prof_username";
-      console.log("getProfessorProfile: Resolved username to:", username);
-      return { username };
-    } catch (error) {
-      console.error(
-        "getProfessorProfile: Error fetching /auth/me:",
-        error instanceof Error ? error.message : String(error)
-      );
-      throw error;
-    }
+    const metadata = getUserMetadata();
+    return { username: metadata?.name?.trim() || "prof_username" };
   },
 
   async getStudentProfile(): Promise<StudentProfileResponse> {
@@ -555,12 +562,8 @@ export const mainApi = {
       return { username: PLACEHOLDERS.student.name };
     }
 
-    const me = await fetchServer<BackendMeResponse>({
-      baseUrl: mainApiBaseUrl,
-      path: "/auth/me",
-      method: "GET",
-    });
-    return { username: me.name || PLACEHOLDERS.student.name };
+    const metadata = getUserMetadata();
+    return { username: metadata?.name?.trim() || PLACEHOLDERS.student.name };
   },
 
   async getCourseById(courseId: string): Promise<ProfessorCourse> {
@@ -585,15 +588,14 @@ export const mainApi = {
       return { courses: [...PLACEHOLDERS.student.courses] };
     }
 
-    const me = await fetchServer<BackendMeResponse>({
-      baseUrl: mainApiBaseUrl,
-      path: "/auth/me",
-      method: "GET",
-    });
+    const metadata = getUserMetadata();
+    if (!metadata?.id) {
+      return { courses: [] };
+    }
 
     const courses = await fetchServer<BackendCourseResponse[]>({
       baseUrl: mainApiBaseUrl,
-      path: `/students/${me.id}/courses`,
+      path: `/students/${metadata.id}/courses`,
       method: "GET",
     });
 
@@ -647,16 +649,15 @@ export const mainApi = {
       return { exam: current };
     }
 
-    const me = await fetchServer<BackendMeResponse>({
-      baseUrl: mainApiBaseUrl,
-      path: "/auth/me",
-      method: "GET",
-    });
+    const metadata = getUserMetadata();
+    if (!metadata?.id) {
+      return { exam: null };
+    }
 
     try {
       const exam = await fetchServer<BackendExamResponse>({
         baseUrl: mainApiBaseUrl,
-        path: `/students/${me.id}/exams/current`,
+        path: `/students/${metadata.id}/exams/current`,
         method: "GET",
       });
       return {
@@ -673,6 +674,33 @@ export const mainApi = {
     } catch {
       return { exam: null };
     }
+  },
+
+  async uploadRecordingChunk(payload: UploadRecordingChunkPayload): Promise<void> {
+    const formData = new FormData();
+    formData.append("sessionId", payload.sessionId);
+    formData.append("examId", payload.examId);
+    formData.append("studentId", payload.studentId);
+    formData.append("index", String(payload.index));
+    formData.append("chunk", payload.chunk, `chunk_${String(payload.index).padStart(6, "0")}.webm`);
+    if (payload.deviceInfo) {
+      formData.append("deviceInfo", payload.deviceInfo);
+    }
+    await fetchServer({
+      baseUrl: mainApiBaseUrl,
+      path: "/recordings/chunk",
+      method: "POST",
+      body: formData,
+    });
+  },
+
+  async finalizeRecording(payload: FinalizeRecordingPayload): Promise<void> {
+    await fetchServer({
+      baseUrl: mainApiBaseUrl,
+      path: "/recordings/finalize",
+      method: "POST",
+      body: payload,
+    });
   },
 
   async getStudentExamDetail(
