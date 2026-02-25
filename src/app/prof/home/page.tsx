@@ -102,7 +102,7 @@ export default function ProfHome() {
           <a className="active" href="/prof/home">
             Home
           </a>
-          <a href="/prof/recordings">Recordings</a>
+          {/* <a href="/prof/recordings">Recordings</a> */}
         </nav>
         <ProfileMenu username={username} />
       </header>
