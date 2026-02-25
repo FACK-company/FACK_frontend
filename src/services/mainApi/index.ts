@@ -44,10 +44,22 @@ async function refreshAccessToken(baseUrl: string, timeoutMs: number): Promise<s
 					clearAccessToken();
 					return null;
 				}
-				const payload = (await response.json()) as { accessToken?: string };
+				const payload = (await response.json()) as {
+					accessToken?: string;
+					userId?: string;
+					name?: string;
+					role?: string;
+					user?: { id?: string; name?: string; role?: string };
+				};
 				const token = payload.accessToken ?? null;
 				if (token) {
 					setAccessToken(token);
+					const existing = getUserMetadata() ?? {};
+					setUserMetadata({
+						id: payload.userId || payload.user?.id || existing.id,
+						name: payload.name || payload.user?.name || existing.name,
+						role: payload.role || payload.user?.role || existing.role,
+					});
 					return token;
 				}
 				clearAccessToken();

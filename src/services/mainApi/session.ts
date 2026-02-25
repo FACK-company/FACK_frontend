@@ -11,6 +11,19 @@ export interface UserMetadata {
   role?: string;
 }
 
+function decodeJwtPayload(token: string): Record<string, unknown> | null {
+  try {
+    const parts = token.split(".");
+    if (parts.length < 2) return null;
+    const payload = parts[1].replace(/-/g, "+").replace(/_/g, "/");
+    const padded = payload + "=".repeat((4 - (payload.length % 4)) % 4);
+    const decoded = atob(padded);
+    return JSON.parse(decoded) as Record<string, unknown>;
+  } catch {
+    return null;
+  }
+}
+
 function getCookieValue(name: string): string | null {
   if (typeof document === "undefined") return null;
   const match = document.cookie.match(new RegExp(`(?:^|; )${name}=([^;]*)`));
@@ -52,21 +65,75 @@ export function clearAccessToken(): void {
 export function getUserMetadata(): UserMetadata | null {
   if (typeof window === "undefined") return null;
 
+  const token = getAccessToken();
+  const tokenPayload = token ? decodeJwtPayload(token) : null;
+  const tokenUserId = String(tokenPayload?.sub ?? "").trim();
+  const tokenRole = String(tokenPayload?.role ?? "").trim().toLowerCase();
+  const tokenEmail = String(tokenPayload?.email ?? "").trim();
+
   const cookieValue = getCookieValue(USER_METADATA_COOKIE);
   if (cookieValue) {
     try {
-      return JSON.parse(cookieValue) as UserMetadata;
+      const parsed = JSON.parse(cookieValue) as UserMetadata;
+      const merged: UserMetadata = {
+        id: parsed.id || tokenUserId || undefined,
+        role: parsed.role || tokenRole || undefined,
+        name:
+          parsed.name ||
+          (tokenEmail ? tokenEmail.split("@")[0] : undefined) ||
+          undefined,
+      };
+      if (
+        merged.id !== parsed.id ||
+        merged.role !== parsed.role ||
+        merged.name !== parsed.name
+      ) {
+        setUserMetadata(merged);
+      }
+      return merged;
     } catch {
       clearCookieValue(USER_METADATA_COOKIE);
     }
   }
 
   const stored = window.localStorage.getItem(USER_METADATA_KEY);
-  if (!stored) return null;
+  if (!stored) {
+    if (!tokenUserId && !tokenRole && !tokenEmail) return null;
+    const inferred: UserMetadata = {
+      id: tokenUserId || undefined,
+      role: tokenRole || undefined,
+      name: tokenEmail ? tokenEmail.split("@")[0] : undefined,
+    };
+    setUserMetadata(inferred);
+    return inferred;
+  }
   try {
-    return JSON.parse(stored) as UserMetadata;
+    const parsed = JSON.parse(stored) as UserMetadata;
+    const merged: UserMetadata = {
+      id: parsed.id || tokenUserId || undefined,
+      role: parsed.role || tokenRole || undefined,
+      name:
+        parsed.name ||
+        (tokenEmail ? tokenEmail.split("@")[0] : undefined) ||
+        undefined,
+    };
+    if (
+      merged.id !== parsed.id ||
+      merged.role !== parsed.role ||
+      merged.name !== parsed.name
+    ) {
+      setUserMetadata(merged);
+    }
+    return merged;
   } catch {
-    return null;
+    if (!tokenUserId && !tokenRole && !tokenEmail) return null;
+    const inferred: UserMetadata = {
+      id: tokenUserId || undefined,
+      role: tokenRole || undefined,
+      name: tokenEmail ? tokenEmail.split("@")[0] : undefined,
+    };
+    setUserMetadata(inferred);
+    return inferred;
   }
 }
 
