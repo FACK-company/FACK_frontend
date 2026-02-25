@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { getUserMetadata, mainApi } from "@/services";
-import ProfileMenu from "@/components/ProfileMenu";
+import ProfNav from "../ProfNav";
 import type { AddProfessorCourseRequest, ProfessorCourse } from "@/types/api/main";
 import styles from "./page.module.css";
 
@@ -94,18 +94,7 @@ export default function ProfHome() {
 
   return (
     <div className={`page ${styles.pageBg}`}>
-      <header className="nav">
-        <a className="brand" href="/prof/home">
-          Fulbright AntiCheat Knight
-        </a>
-        <nav className="nav-links">
-          <a className="active" href="/prof/home">
-            Home
-          </a>
-          <a href="/prof/recordings">Recordings</a>
-        </nav>
-        <ProfileMenu username={username} />
-      </header>
+      <ProfNav username={username} active="home" />
 
       <main className="main">
         <section className="frame">

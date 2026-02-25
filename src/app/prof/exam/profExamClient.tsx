@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import styles from "./page.module.css";
 import { getUserMetadata } from "@/services/mainApi/session";
 import { mainApi } from "@/services";
-import ProfileMenu from "@/components/ProfileMenu";
+import ProfNav from "../ProfNav";
 import type { AddProfessorExamRequest, ProfessorRecordingListItem } from "@/types/api/main";
 
 type ProfExamDetails = {
@@ -189,16 +189,7 @@ export default function ProfExamClient({
 
   return (
     <div className={`page ${styles.pageBg}`}>
-      <header className="nav">
-        <a className="brand" href="/prof/home">
-          Fulbright AntiCheat Knight
-        </a>
-        <nav className="nav-links">
-          <a href="/prof/home">Home</a>
-          <a href="/prof/recordings">Recordings</a>
-        </nav>
-        <ProfileMenu username={username} />
-      </header>
+      <ProfNav username={username} />
 
       <main className="main">
         <section className="frame">

@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { getUserMetadata, mainApi } from "@/services";
-import ProfileMenu from "@/components/ProfileMenu";
+import StudentNav from "../StudentNav";
 import type { StudentExamDetailResponse } from "@/types/api/main";
 import styles from "./page.module.css";
 
@@ -269,15 +269,7 @@ export default function StudentRecordPage() {
 
   return (
     <div className="page bg-record">
-      {!isRecording && (
-        <header className="nav">
-          <a className="brand" href="/student/home">
-            Fulbright AntiCheat Knight
-          </a>
-          <nav className="nav-links" aria-hidden="true"></nav>
-          <ProfileMenu username={username} />
-        </header>
-      )}
+      {!isRecording && <StudentNav username={username} />}
 
       <header className={`topbar ${styles.topbarLayout}`} style={{ display: isRecording ? "grid" : "none" }}>
         <div className={`status ${styles.topbarCell} ${styles.topbarLeft}`}>

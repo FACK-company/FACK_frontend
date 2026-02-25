@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { getUserMetadata, mainApi } from "@/services";
-import ProfileMenu from "@/components/ProfileMenu";
+import ProfNav from "../ProfNav";
 import type {
   AddProfessorExamRequest,
   AddProfessorCourseStudentRequest,
@@ -189,16 +189,7 @@ export default function ProfCourseClient({
 
   return (
     <div className={`page ${styles.pageBg}`}>
-      <header className="nav">
-        <a className="brand" href="/prof/home">
-          Fulbright AntiCheat Knight
-        </a>
-        <nav className="nav-links">
-          <a href="/prof/home">Home</a>
-          <a href="/prof/recordings">Recordings</a>
-        </nav>
-        <ProfileMenu username={username} />
-      </header>
+      <ProfNav username={username} />
 
       <main className="main">
         <section className="frame">
