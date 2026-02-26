@@ -4,6 +4,7 @@ import { Suspense, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { mainApi } from "@/services";
 import StudentNav from "../StudentNav";
+import LoadingState from "@/components/LoadingState";
 import styles from "./page.module.css";
 import type { StudentCourse, StudentExamSummary } from "@/types/api/main";
 
@@ -59,7 +60,11 @@ function StudentCoursePageContent() {
         <section className="frame">
           <div className={styles.pageTitle}>{courseTitle}</div>
           <div className={styles.list}>
-            {loading && <div className={styles.empty}>Loading exams...</div>}
+            {loading && (
+              <div className={styles.empty}>
+                <LoadingState text="Loading exams..." variant="inline" />
+              </div>
+            )}
             {!loading &&
               exams.map((exam) => (
                 <article className={styles.examCard} key={exam.id}>

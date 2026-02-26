@@ -1,5 +1,6 @@
-'use client';
-import { useState, useEffect } from 'react';
+"use client";
+import { useState, useEffect } from "react";
+import LoadingState from "@/components/LoadingState";
 
 interface Video {
     id: string;
@@ -38,7 +39,11 @@ export default function RecordsDashboard() {
     };
 
     if (loading) {
-        return <div className="p-8 text-center">Loading...</div>;
+        return (
+            <div className="page bg-grad loading-screen">
+                <LoadingState text="Loading recordings..." />
+            </div>
+        );
     }
 
     return (
