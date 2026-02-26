@@ -13,6 +13,12 @@ WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
+# Build-time public envs for Next.js client bundle
+ARG NEXT_PUBLIC_API_BASE_URL
+ARG NEXT_PUBLIC_API_TIMEOUT
+ENV NEXT_PUBLIC_API_BASE_URL=${NEXT_PUBLIC_API_BASE_URL}
+ENV NEXT_PUBLIC_API_TIMEOUT=${NEXT_PUBLIC_API_TIMEOUT}
+
 # Build Next.js app
 RUN npm run build
 

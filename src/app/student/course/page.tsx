@@ -1,13 +1,13 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { mainApi } from "@/services";
-import ProfileMenu from "@/components/ProfileMenu";
+import StudentNav from "../StudentNav";
 import styles from "./page.module.css";
 import type { StudentCourse, StudentExamSummary } from "@/types/api/main";
 
-export default function StudentCoursePage() {
+function StudentCoursePageContent() {
   const searchParams = useSearchParams();
   const courseId = useMemo(() => searchParams.get("courseId") || "CS207", [searchParams]);
 
@@ -53,13 +53,7 @@ export default function StudentCoursePage() {
 
   return (
     <div className={`page ${styles.pageBg}`}>
-      <header className="nav">
-        <a className="brand" href="/student/home">
-          Fulbright AntiCheat Knight
-        </a>
-        <nav className="nav-links" aria-hidden="true"></nav>
-        <ProfileMenu username={username} />
-      </header>
+      <StudentNav username={username} />
 
       <main className="main">
         <section className="frame">
@@ -113,5 +107,13 @@ export default function StudentCoursePage() {
         </section>
       </main>
     </div>
+  );
+}
+
+export default function StudentCoursePage() {
+  return (
+    <Suspense fallback={<div className="page" />}>
+      <StudentCoursePageContent />
+    </Suspense>
   );
 }

@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 
 // ─── Config ───────────────────────────────────────────────────────────────────
-const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8080';
+const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8080/api';
 const CHUNK_INTERVAL_MS = 5_000;
 
 // Ranked list of MIME types — first supported one wins
@@ -36,11 +36,15 @@ type Status =
 // ─── API helpers ──────────────────────────────────────────────────────────────
 async function apiUploadChunk(
     sessionId: string,
+    studentId: string,
+    examId: string,
     index: number,
     blob: Blob,
 ): Promise<void> {
     const fd = new FormData();
     fd.append('sessionId', sessionId);
+    fd.append('studentId', studentId);
+    fd.append('examId', examId);
     fd.append('index', String(index));
     fd.append('chunk', blob, `chunk_${String(index).padStart(6, '0')}.webm`);
 
@@ -102,7 +106,9 @@ export default function RecordingPage() {
             const blob = queueRef.current[0];
             const index = chunkIndexRef.current;
             try {
-                await apiUploadChunk(sessionIdRef.current, index, blob);
+                const studentId = '345678'; 
+                const examId = 'exam-cs105-quiz5'; 
+                await apiUploadChunk(sessionIdRef.current, studentId, examId, index, blob);
                 console.log(`✅ Chunk ${index} uploaded (${blob.size} bytes)`);
                 queueRef.current.shift();
                 chunkIndexRef.current += 1;
@@ -205,8 +211,8 @@ export default function RecordingPage() {
             drainQueue(); // non-blocking; drainer skips if already running
         };
 
-        recorder.onerror = (e) => {
-            const err = (e as MediaRecorderErrorEvent).error;
+        recorder.onerror = (e: Event) => {
+            const err = (e as Event & { error?: DOMException }).error;
             console.error('Recorder error:', err);
             setStatus({ kind: 'error', message: err?.message ?? 'Recorder error' });
             cleanUpStream();

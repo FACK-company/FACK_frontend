@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { mainApi } from "@/services";
 import ProfileMenu from "@/components/ProfileMenu";
@@ -30,7 +30,7 @@ function parseBeginEnd(timeWindow: string): { beginTime: string; endTime: string
   return { beginTime: timeWindow, endTime: "-" };
 }
 
-export default function StudentRecordPage() {
+function StudentRecordPageContent() {
   const searchParams = useSearchParams();
   const courseId = searchParams.get("courseId") || "cs207";
   const examId = searchParams.get("examId") || "final-exam";
@@ -295,5 +295,13 @@ export default function StudentRecordPage() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function StudentRecordPage() {
+  return (
+    <Suspense fallback={<div className="page bg-record" />}>
+      <StudentRecordPageContent />
+    </Suspense>
   );
 }

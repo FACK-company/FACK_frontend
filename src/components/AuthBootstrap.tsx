@@ -62,17 +62,16 @@ export default function AuthBootstrap() {
       const tokenRole = String(payload?.role ?? "").toLowerCase();
       const tokenUserId = String(payload?.sub ?? "");
 
-      if (!currentMetadata.role && tokenRole) {
-        setUserMetadata({
-          ...currentMetadata,
-          id: currentMetadata.id || tokenUserId || undefined,
-          role: tokenRole,
-        });
-      }
+      const nextMetadata = {
+        ...currentMetadata,
+        id: tokenUserId || currentMetadata.id,
+        role: tokenRole || currentMetadata.role,
+      };
+      setUserMetadata(nextMetadata);
 
-      const role = (currentMetadata.role || tokenRole || "").toLowerCase();
+      const role = String(nextMetadata.role || "").toLowerCase();
 
-      if (pathname === "/login") {
+      if (pathname === "/" || pathname === "/login" || pathname === "/about") {
         router.replace(role === "professor" ? "/prof/home" : "/student/home");
         return;
       }

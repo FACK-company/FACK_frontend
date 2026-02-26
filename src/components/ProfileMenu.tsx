@@ -45,10 +45,6 @@ export default function ProfileMenu({ username }: ProfileMenuProps) {
       </button>
       {open && (
         <div className={styles.dropdown}>
-          <div className={styles.statusRow}>
-            <span className={styles.statusDot} aria-hidden="true"></span>
-            <span>Logged in</span>
-          </div>
           <button
             className={styles.logoutBtn}
             type="button"
