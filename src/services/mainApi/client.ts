@@ -24,6 +24,7 @@ import type {
   StudentExamDetailResponse,
   StudentExamSummary,
   StudentProfileResponse,
+  ExamSession,
 } from "@/types/api/main";
 import {
   clearAccessToken,
@@ -32,6 +33,7 @@ import {
   getUserMetadata,
   refreshAccessToken,
   setAccessToken,
+  setUserMetadata,
 } from "./index";
 
 const mainApiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL ?? "";
@@ -388,14 +390,12 @@ const PLACEHOLDERS = {
   },
 };
 
-function requireCurrentUserId(): string {
-  const metadata = getUserMetadata();
-  const userId = metadata?.id?.trim();
-  if (!userId) {
-    throw new Error("Missing user id in session metadata");
-  }
-  return userId;
-}
+type BackendMeResponse = {
+  id: string;
+  name: string;
+  email: string;
+  role?: string;
+};
 
 type BackendCourseResponse = {
   id: string;
@@ -414,6 +414,22 @@ type BackendExamResponse = {
   durationMinutes?: number;
   startAvailableAt?: string;
   endAvailableAt?: string;
+};
+
+type UploadRecordingChunkPayload = {
+  sessionId: string;
+  examId: string;
+  studentId: string;
+  index: number;
+  chunk: Blob;
+  deviceInfo?: string;
+};
+
+type FinalizeRecordingPayload = {
+  sessionId: string;
+  examId: string;
+  studentId: string;
+  deviceInfo?: string;
 };
 
 function formatMonthDayTime(dateLike?: string): { monthDay: string; time: string } {
@@ -498,6 +514,11 @@ export const mainApi = {
     if (response?.accessToken) {
       setAccessToken(response.accessToken);
     }
+    setUserMetadata({
+      id: response.userId || response.user?.id,
+      name: response.name || response.user?.name,
+      role: response.role || response.user?.role,
+    });
 
     return response;
   },
@@ -567,11 +588,14 @@ export const mainApi = {
       return { courses: [...PLACEHOLDERS.student.courses] };
     }
 
-    const userId = requireCurrentUserId();
+    const metadata = getUserMetadata();
+    if (!metadata?.id) {
+      return { courses: [] };
+    }
 
     const courses = await fetchServer<BackendCourseResponse[]>({
       baseUrl: mainApiBaseUrl,
-      path: `/students/${userId}/courses`,
+      path: `/students/${metadata.id}/courses`,
       method: "GET",
     });
 
@@ -625,12 +649,15 @@ export const mainApi = {
       return { exam: current };
     }
 
-    const userId = requireCurrentUserId();
+    const metadata = getUserMetadata();
+    if (!metadata?.id) {
+      return { exam: null };
+    }
 
     try {
       const exam = await fetchServer<BackendExamResponse>({
         baseUrl: mainApiBaseUrl,
-        path: `/students/${userId}/exams/current`,
+        path: `/students/${metadata.id}/exams/current`,
         method: "GET",
       });
       return {
@@ -647,6 +674,33 @@ export const mainApi = {
     } catch {
       return { exam: null };
     }
+  },
+
+  async uploadRecordingChunk(payload: UploadRecordingChunkPayload): Promise<void> {
+    const formData = new FormData();
+    formData.append("sessionId", payload.sessionId);
+    formData.append("examId", payload.examId);
+    formData.append("studentId", payload.studentId);
+    formData.append("index", String(payload.index));
+    formData.append("chunk", payload.chunk, `chunk_${String(payload.index).padStart(6, "0")}.webm`);
+    if (payload.deviceInfo) {
+      formData.append("deviceInfo", payload.deviceInfo);
+    }
+    await fetchServer({
+      baseUrl: mainApiBaseUrl,
+      path: "/recordings/chunk",
+      method: "POST",
+      body: formData,
+    });
+  },
+
+  async finalizeRecording(payload: FinalizeRecordingPayload): Promise<void> {
+    await fetchServer({
+      baseUrl: mainApiBaseUrl,
+      path: "/recordings/finalize",
+      method: "POST",
+      body: payload,
+    });
   },
 
   async getStudentExamDetail(
@@ -938,6 +992,26 @@ export const mainApi = {
       path: "/prof/recordings",
       method: "GET",
     });
+  },
+
+  async getExamSessions(examId: string): Promise<ExamSession[]> {
+    return fetchServer<ExamSession[]>({
+      baseUrl: mainApiBaseUrl,
+      path: `/exam-sessions/by-exam/${examId}`,
+      method: "GET",
+    });
+  },
+
+  async getExamSessionMetadata(sessionId: string): Promise<ExamSession> {
+    return fetchServer<ExamSession>({
+      baseUrl: mainApiBaseUrl,
+      path: `/exam-sessions/${sessionId}`,
+      method: "GET",
+    });
+  },
+
+  getSessionRecordingUrl(sessionId: string): string {
+    return `${mainApiBaseUrl}/recordings/by-session/${sessionId}`;
   },
 
   async addRecordingComment(

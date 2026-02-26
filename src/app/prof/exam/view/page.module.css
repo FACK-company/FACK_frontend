@@ -49,6 +49,18 @@
   min-width:170px;
 }
 
+.noRecordingMsg{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  min-height:420px;
+  color:rgba(0,25,110,.5);
+  font-size:16px;
+  font-weight:600;
+  background:rgba(0,25,110,.04);
+  border-radius:14px;
+}
+
 .contentGrid{
   display:grid;
   grid-template-columns: minmax(0, 1.55fr) minmax(320px, 1fr);

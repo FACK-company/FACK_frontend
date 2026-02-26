@@ -103,7 +103,7 @@
 
 .recordingTable .recordingTableHead,
 .recordingTable .recordingTableRow{
-  grid-template-columns: minmax(200px, 1.1fr) minmax(140px, 0.7fr) minmax(120px, 0.6fr) minmax(180px, 1fr) 170px !important;
+  grid-template-columns: minmax(150px, 0.75fr) minmax(220px, 1.3fr) minmax(100px, 0.5fr) minmax(90px, 0.45fr) minmax(120px, 0.6fr) !important;
 }
 
 .recordingTableRow{
@@ -149,4 +149,17 @@
   .examTableRow{
     min-height:unset;
   }
+}
+
+.empty{
+  text-align:center;
+  color:rgba(0,25,110,.5);
+  padding:40px 20px;
+  font-size:15px;
+}
+
+.noRecording{
+  color:rgba(0,25,110,.4);
+  font-size:14px;
+  text-align:center;
 }
