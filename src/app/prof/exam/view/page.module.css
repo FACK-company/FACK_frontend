@@ -9,7 +9,7 @@
 .errorBanner{
   margin-bottom:14px;
   padding:10px 12px;
-  border-radius:10px;
+  border-radius:4px;
   color:#7f1d1d;
   background:rgba(220,38,38,.12);
   border:1px solid rgba(220,38,38,.3);
@@ -34,7 +34,7 @@
 .videoPlayer{
   width:100%;
   height:420px;
-  border-radius:14px;
+  border-radius:4px;
   background:rgba(0,25,110,.04);
   object-fit:contain;
 }
@@ -58,7 +58,7 @@
   font-size:16px;
   font-weight:600;
   background:rgba(0,25,110,.04);
-  border-radius:14px;
+  border-radius:4px;
 }
 
 .contentGrid{
@@ -71,7 +71,7 @@
 .commentSection{
   background:#fff;
   border:1px solid rgba(0,25,110,.12);
-  border-radius:18px;
+  border-radius:4px;
   padding:18px 20px;
   box-shadow:0 12px 26px rgba(0,0,0,.06);
 }
@@ -90,7 +90,7 @@
 
 .commentInput{
   min-height:84px;
-  border-radius:12px;
+  border-radius:4px;
   border:1px solid rgba(0,25,110,.2);
   padding:10px 12px;
   font:inherit;
@@ -109,13 +109,13 @@
   gap:10px;
   align-items:start;
   border:1px solid rgba(0,25,110,.1);
-  border-radius:12px;
+  border-radius:4px;
   padding:10px;
 }
 
 .timestampBtn{
   height:36px;
-  border-radius:10px;
+  border-radius:4px;
   border:1px solid rgba(0,25,110,.22);
   background:rgba(0,25,110,.04);
   color:var(--navy);
