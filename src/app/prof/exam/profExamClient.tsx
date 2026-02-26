@@ -5,7 +5,12 @@ import styles from "./page.module.css";
 import { getUserMetadata } from "@/services/mainApi/session";
 import { mainApi } from "@/services";
 import ProfNav from "../ProfNav";
-import type { AddProfessorExamRequest, ProfessorRecordingListItem } from "@/types/api/main";
+import type {
+  AddProfessorExamRequest,
+  ExamSession,
+  ProfessorExamDetailsResponse,
+  ProfessorRecordingListItem,
+} from "@/types/api/main";
 
 type ProfExamDetails = {
   id: string;
