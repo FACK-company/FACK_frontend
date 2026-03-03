@@ -1,7 +1,7 @@
 ﻿"use client";
 
 import { Suspense, useEffect, useMemo, useRef, useState } from "react";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 import { getUserMetadata, mainApi } from "@/services";
 import StudentNav from "../StudentNav";
 import LoadingState from "@/components/LoadingState";
@@ -73,6 +73,7 @@ function generateSessionId(): string {
 
 function StudentRecordPageContent() {
   const searchParams = useSearchParams();
+  const router = useRouter();
   const courseId = searchParams.get("courseId") || "cs207";
   const examId = searchParams.get("examId") || "final-exam";
 
@@ -83,16 +84,18 @@ function StudentRecordPageContent() {
   const [isRecording, setIsRecording] = useState(false);
   const [remainingSec, setRemainingSec] = useState(0);
   const [isOnline, setIsOnline] = useState(true);
-  const [showPermissionModal, setShowPermissionModal] = useState(false);
   const [isPermissionPending, setIsPermissionPending] = useState(false);
   const [showStopModal, setShowStopModal] = useState(false);
   const [showWarning, setShowWarning] = useState(true);
+  const [isFinalizing, setIsFinalizing] = useState(false);
   const [recordingSessionId, setRecordingSessionId] = useState<string | null>(null);
 
   const mediaStreamRef = useRef<MediaStream | null>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const uploadQueueRef = useRef<Promise<void>>(Promise.resolve());
   const chunkIndexRef = useRef(0);
+  const sessionIdRef = useRef<string | null>(null);
+  const stopRecorderAndFinalizeRef = useRef<(() => Promise<void>) | undefined>(undefined);
 
   useEffect(() => {
     let isMounted = true;
@@ -133,6 +136,50 @@ function StudentRecordPageContent() {
     }, 1000);
     return () => clearInterval(timer);
   }, [isRecording]);
+
+  // Auto-submit when timer reaches 0
+  useEffect(() => {
+    if (isRecording && remainingSec === 0 && !isFinalizing) {
+      stopRecorderAndFinalizeRef.current?.();
+    }
+  }, [isRecording, remainingSec, isFinalizing]);
+
+  useEffect(() => {
+    console.log("Recording session ID changed:", recordingSessionId);
+  }, [recordingSessionId]);
+
+  // Warn the student before closing/refreshing the tab while recording
+  useEffect(() => {
+    if (!isRecording) return;
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = "";
+    };
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+  }, [isRecording]);
+
+  // Best-effort finalize via sendBeacon when the page is actually being closed
+  useEffect(() => {
+    if (!isRecording) return;
+    const handlePageHide = () => {
+      const currentSessionId = sessionIdRef.current;
+      const metadata = getUserMetadata();
+      if (!currentSessionId || !metadata?.id) return;
+
+      const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL ?? "";
+      const url = `${baseUrl}/recordings/finalize`;
+      const payload = JSON.stringify({
+        sessionId: currentSessionId,
+        examId,
+        studentId: metadata.id,
+        deviceInfo: typeof navigator !== "undefined" ? navigator.userAgent : "unknown",
+      });
+      navigator.sendBeacon(url, new Blob([payload], { type: "application/json" }));
+    };
+    window.addEventListener("pagehide", handlePageHide);
+    return () => window.removeEventListener("pagehide", handlePageHide);
+  }, [isRecording, examId]);
 
   useEffect(() => {
     const updateNetwork = () => setIsOnline(typeof navigator !== "undefined" ? navigator.onLine : true);
@@ -193,6 +240,17 @@ function StudentRecordPageContent() {
         audio: true,
       });
 
+      // Enforce full-screen share (not a tab or window)
+      const videoTrack = stream.getVideoTracks()[0];
+      const trackSettings = videoTrack.getSettings() as MediaTrackSettings & { displaySurface?: string };
+      if (trackSettings.displaySurface && trackSettings.displaySurface !== "monitor") {
+        stream.getTracks().forEach((t) => t.stop());
+        // setError("Please share your ENTIRE SCREEN, not a tab or window.");
+        alert("Please share your ENTIRE SCREEN, not a tab or window.");
+        setIsPermissionPending(false);
+        return;
+      }
+
       const sessionId = generateSessionId();
       const mimeType = getRecordingMimeType();
       const recorder = new MediaRecorder(stream, { mimeType });
@@ -202,8 +260,8 @@ function StudentRecordPageContent() {
       chunkIndexRef.current = 0;
       uploadQueueRef.current = Promise.resolve();
       setRecordingSessionId(sessionId);
+      sessionIdRef.current = sessionId;
       setRemainingSec(totalDurationSec);
-      setShowPermissionModal(false);
       setShowWarning(false);
       setError("");
       setIsRecording(true);
@@ -216,15 +274,14 @@ function StudentRecordPageContent() {
 
       stream.getVideoTracks().forEach((track) => {
         track.onended = () => {
-          setShowStopModal(true);
+          stopRecorderAndFinalize();
         };
       });
 
       recorder.start(4000);
     } catch {
-      setError("Screen recording permission denied or not available.");
+      // setError("Screen recording permission denied or not available.");
       setIsRecording(false);
-      setShowPermissionModal(false);
       setShowWarning(true);
     } finally {
       setIsPermissionPending(false);
@@ -233,10 +290,16 @@ function StudentRecordPageContent() {
 
   const stopRecorderAndFinalize = async () => {
     const metadata = getUserMetadata();
-    if (!metadata?.id || !recordingSessionId) {
+    const currentSessionId = sessionIdRef.current;
+    if (!metadata?.id || !currentSessionId) {
+      console.log("Missing metadata or recording session ID", { metadata, currentSessionId });
       setError("Missing recording session information.");
       return;
     }
+
+    setIsFinalizing(true);
+    setShowStopModal(false);
+    window.focus();
 
     try {
       const recorder = mediaRecorderRef.current;
@@ -253,7 +316,7 @@ function StudentRecordPageContent() {
       await uploadQueueRef.current;
 
       await mainApi.finalizeRecording({
-        sessionId: recordingSessionId,
+        sessionId: currentSessionId,
         examId,
         studentId: metadata.id,
         deviceInfo: typeof navigator !== "undefined" ? navigator.userAgent : "unknown",
@@ -261,12 +324,23 @@ function StudentRecordPageContent() {
 
       setIsRecording(false);
       setRecordingSessionId(null);
+      sessionIdRef.current = null;
       setRemainingSec(0);
-      setShowStopModal(false);
+
+      const params = new URLSearchParams();
+      params.set("courseId", courseId);
+      if (exam?.courseCode) params.set("courseCode", exam.courseCode);
+      if (exam?.title) params.set("examTitle", exam.title);
+      router.replace(`/student/record/complete?${params.toString()}`);
     } catch {
       setError("Unable to finalize recording. Please retry ending the exam.");
+    } finally {
+      setIsFinalizing(false);
     }
   };
+
+  // Keep the ref in sync with the latest stopRecorderAndFinalize
+  stopRecorderAndFinalizeRef.current = stopRecorderAndFinalize;
 
   return (
     <div className="page bg-record">
@@ -342,8 +416,13 @@ function StudentRecordPageContent() {
             <section className="panel right">
               {!isRecording && (
                 <div className="actions">
-                  <button className="primary-btn" type="button" onClick={() => setShowPermissionModal(true)}>
-                    Start Recording &amp; Exam
+                  <button
+                    className="primary-btn"
+                    type="button"
+                    disabled={isPermissionPending}
+                    onClick={startRecording}
+                  >
+                    {isPermissionPending ? "Waiting for permission..." : "Start Recording & Exam"}
                   </button>
                   <div className={`warning ${styles.warningCentered}`}>
                     Screen recording permission is required to start the exam.
@@ -364,42 +443,17 @@ function StudentRecordPageContent() {
         End Exam
       </button>
 
-      {showPermissionModal && (
+      {isFinalizing && (
         <div className="modal show">
-          <div className="modal-card" role="dialog" aria-modal="true">
-            <h3>Allow screen recording?</h3>
-            <p>We need your permission to record your screen before starting the exam.</p>
-            {isPermissionPending && (
-              <p className={styles.permissionPendingText}>
-                Please wait a moment while the browser asks for screen-sharing permission.
-              </p>
-            )}
-            <div className="modal-actions">
-              <button
-                className={styles.modalDenyBtn}
-                type="button"
-                disabled={isPermissionPending}
-                onClick={() => {
-                  setShowPermissionModal(false);
-                  setShowWarning(true);
-                }}
-              >
-                Deny
-              </button>
-              <button
-                className={styles.modalPrimaryBtn}
-                type="button"
-                disabled={isPermissionPending}
-                onClick={startRecording}
-              >
-                {isPermissionPending ? "Waiting..." : "Allow"}
-              </button>
-            </div>
+          <div className="modal-card" role="dialog" aria-modal="true" style={{ textAlign: "center" }}>
+            <h3>Finalizing your exam...</h3>
+            <p>Please wait while your recording is being saved and submitted.</p>
+            <LoadingState text="" variant="inline" />
           </div>
         </div>
       )}
 
-      {showStopModal && (
+      {showStopModal && !isFinalizing && (
         <div className="modal show">
           <div className="modal-card" role="dialog" aria-modal="true">
             <h3>End exam?</h3>
