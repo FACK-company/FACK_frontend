@@ -24,7 +24,7 @@
   width:min(520px, 100%);
   font-size:22px;
   font-weight:800;
-  border-radius:14px;
+  border-radius:4px;
   border:1px solid rgba(0,25,110,.2);
   padding:10px 14px;
   color:var(--navy);
@@ -33,7 +33,7 @@
 .ghostBtn{
   height:52px;
   min-width:120px;
-  border-radius:12px;
+  border-radius:4px;
   border:1px solid rgba(0,25,110,.25);
   background:#fff;
   color:var(--navy);
@@ -44,7 +44,7 @@
 
 .inputField{
   width:100%;
-  border-radius:12px;
+  border-radius:4px;
   border:1px solid rgba(0,25,110,.2);
   padding:10px 12px;
   font-weight:700;

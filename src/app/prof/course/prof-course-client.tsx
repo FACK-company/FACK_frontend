@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { getUserMetadata, mainApi } from "@/services";
 import ProfNav from "../ProfNav";
+import LoadingState from "@/components/LoadingState";
 import type {
   AddProfessorExamRequest,
   AddProfessorCourseStudentRequest,
@@ -228,7 +229,11 @@ export default function ProfCourseClient({
         <section className="frame">
           <div className="page-title">Course — {courseTitle}</div>
           {error && <div className={styles.errorText}>{error}</div>}
-          {isLoading && <div className={styles.empty}>Loading course data...</div>}
+          {isLoading && (
+            <div className={styles.empty}>
+              <LoadingState text="Loading course data..." variant="inline" />
+            </div>
+          )}
 
           <div className={styles.layout}>
             <section className={styles.examPanel}>
