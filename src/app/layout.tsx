@@ -22,8 +22,9 @@ export default function RootLayout({
                 />
             </head>
             <body suppressHydrationWarning>
-                <AuthBootstrap />
-                {children}
+                <AuthBootstrap>
+                    {children}
+                </AuthBootstrap>
             </body>
         </html>
     );
