@@ -3,6 +3,8 @@
 import { useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import {
+  clearAccessToken,
+  clearUserMetadata,
   getAccessToken,
   getUserMetadata,
   mainApi,
@@ -41,21 +43,20 @@ export default function AuthBootstrap() {
       if (!pathname) return;
 
       const needsAuth = isProtectedPath(pathname);
-      let token = getAccessToken();
 
-      if (!token) {
-        const refreshed = await mainApi.bootstrapAuth();
-        token = refreshed?.accessToken ?? getAccessToken();
-      }
+      // Always refresh on every navigation to keep the session alive
+      const refreshed = await mainApi.bootstrapAuth();
+      const token = refreshed?.accessToken ?? getAccessToken();
 
       if (!mounted) return;
 
-      if (!token && needsAuth) {
+      if (!token) {
+        // Refresh failed — clear session and redirect to homepage
+        clearAccessToken();
+        clearUserMetadata();
         router.replace("/login");
         return;
       }
-
-      if (!token) return;
 
       const currentMetadata = getUserMetadata() || {};
       const payload = decodeJwtPayload(token);
@@ -92,7 +93,6 @@ export default function AuthBootstrap() {
     }
 
     void bootstrap();
-
     return () => {
       mounted = false;
     };
