@@ -46,6 +46,7 @@ export default function AuthBootstrap() {
 
       // Always refresh on every navigation to keep the session alive
       const refreshed = await mainApi.bootstrapAuth();
+      console.log("AuthBootstrap: Refreshed token", refreshed);
       const token = refreshed?.accessToken ?? getAccessToken();
 
       if (!mounted) return;

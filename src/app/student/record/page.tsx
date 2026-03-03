@@ -87,12 +87,14 @@ function StudentRecordPageContent() {
   const [isPermissionPending, setIsPermissionPending] = useState(false);
   const [showStopModal, setShowStopModal] = useState(false);
   const [showWarning, setShowWarning] = useState(true);
+  const [isFinalizing, setIsFinalizing] = useState(false);
   const [recordingSessionId, setRecordingSessionId] = useState<string | null>(null);
 
   const mediaStreamRef = useRef<MediaStream | null>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const uploadQueueRef = useRef<Promise<void>>(Promise.resolve());
   const chunkIndexRef = useRef(0);
+  const sessionIdRef = useRef<string | null>(null);
 
   useEffect(() => {
     let isMounted = true;
@@ -133,6 +135,10 @@ function StudentRecordPageContent() {
     }, 1000);
     return () => clearInterval(timer);
   }, [isRecording]);
+
+  useEffect(() => {
+    console.log("Recording session ID changed:", recordingSessionId);
+  }, [recordingSessionId]);
 
   useEffect(() => {
     const updateNetwork = () => setIsOnline(typeof navigator !== "undefined" ? navigator.onLine : true);
@@ -213,6 +219,7 @@ function StudentRecordPageContent() {
       chunkIndexRef.current = 0;
       uploadQueueRef.current = Promise.resolve();
       setRecordingSessionId(sessionId);
+      sessionIdRef.current = sessionId;
       setRemainingSec(totalDurationSec);
       setShowWarning(false);
       setError("");
@@ -226,7 +233,7 @@ function StudentRecordPageContent() {
 
       stream.getVideoTracks().forEach((track) => {
         track.onended = () => {
-          setShowStopModal(true);
+          stopRecorderAndFinalize();
         };
       });
 
@@ -242,10 +249,15 @@ function StudentRecordPageContent() {
 
   const stopRecorderAndFinalize = async () => {
     const metadata = getUserMetadata();
-    if (!metadata?.id || !recordingSessionId) {
+    const currentSessionId = sessionIdRef.current;
+    if (!metadata?.id || !currentSessionId) {
+      console.log("Missing metadata or recording session ID", { metadata, currentSessionId });
       setError("Missing recording session information.");
       return;
     }
+
+    setIsFinalizing(true);
+    setShowStopModal(false);
 
     try {
       const recorder = mediaRecorderRef.current;
@@ -262,7 +274,7 @@ function StudentRecordPageContent() {
       await uploadQueueRef.current;
 
       await mainApi.finalizeRecording({
-        sessionId: recordingSessionId,
+        sessionId: currentSessionId,
         examId,
         studentId: metadata.id,
         deviceInfo: typeof navigator !== "undefined" ? navigator.userAgent : "unknown",
@@ -270,8 +282,8 @@ function StudentRecordPageContent() {
 
       setIsRecording(false);
       setRecordingSessionId(null);
+      sessionIdRef.current = null;
       setRemainingSec(0);
-      setShowStopModal(false);
 
       const params = new URLSearchParams();
       params.set("courseId", courseId);
@@ -280,6 +292,8 @@ function StudentRecordPageContent() {
       router.replace(`/student/record/complete?${params.toString()}`);
     } catch {
       setError("Unable to finalize recording. Please retry ending the exam.");
+    } finally {
+      setIsFinalizing(false);
     }
   };
 
@@ -384,7 +398,17 @@ function StudentRecordPageContent() {
         End Exam
       </button>
 
-      {showStopModal && (
+      {isFinalizing && (
+        <div className="modal show">
+          <div className="modal-card" role="dialog" aria-modal="true" style={{ textAlign: "center" }}>
+            <h3>Finalizing your exam...</h3>
+            <p>Please wait while your recording is being saved and submitted.</p>
+            <LoadingState text="" variant="inline" />
+          </div>
+        </div>
+      )}
+
+      {showStopModal && !isFinalizing && (
         <div className="modal show">
           <div className="modal-card" role="dialog" aria-modal="true">
             <h3>End exam?</h3>
