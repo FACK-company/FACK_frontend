@@ -1,4 +1,5 @@
 import ProfileMenu from "@/components/ProfileMenu";
+import BackButton from "@/components/BackButton";
 
 type ProfNavProps = {
   username: string;
@@ -8,9 +9,12 @@ type ProfNavProps = {
 export default function ProfNav({ username, active }: ProfNavProps) {
   return (
     <header className="nav">
-      <a className="brand" href="/prof/home">
-        Fulbright AntiCheat Knight
-      </a>
+      <div className="nav-left">
+        <BackButton />
+        <a className="brand" href="/prof/home">
+          Fulbright AntiCheat Knight
+        </a>
+      </div>
       <nav className="nav-links">
         <a className={active === "home" ? "active" : undefined} href="/prof/home">
           Home
@@ -23,4 +27,3 @@ export default function ProfNav({ username, active }: ProfNavProps) {
     </header>
   );
 }
-

@@ -21,7 +21,7 @@
 .examCard{
   background:#fff;
   border:1px solid rgba(0,25,110,.12);
-  border-radius:18px;
+  border-radius:4px;
   padding:18px 20px;
   box-shadow:0 12px 26px rgba(0,0,0,.06);
 }
@@ -102,7 +102,7 @@
   margin-top:6px;
   padding:14px;
   border:1px dashed rgba(0,25,110,.24);
-  border-radius:12px;
+  border-radius:4px;
   color:rgba(0,25,110,.7);
   font-weight:700;
 }

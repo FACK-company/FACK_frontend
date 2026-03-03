@@ -4,6 +4,7 @@ import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { getUserMetadata, mainApi } from "@/services";
 import StudentNav from "../StudentNav";
+import LoadingState from "@/components/LoadingState";
 import type { StudentExamDetailResponse } from "@/types/api/main";
 import styles from "./page.module.css";
 
@@ -307,7 +308,11 @@ function StudentRecordPageContent() {
           </div>
         )}
 
-        {loading && <div className={styles.placeholder}>Loading exam...</div>}
+        {loading && (
+          <div className={styles.placeholder}>
+            <LoadingState text="Loading exam..." variant="inline" />
+          </div>
+        )}
         {!loading && error && <div className={styles.error}>{error}</div>}
 
         {!loading && !error && exam && (
