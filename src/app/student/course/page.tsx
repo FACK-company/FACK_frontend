@@ -66,7 +66,9 @@ function StudentCoursePageContent() {
               </div>
             )}
             {!loading &&
-              exams.map((exam) => (
+              exams.map((exam) => {
+                const isEnded = exam.status === "Ended";
+                return (
                 <article className={styles.examCard} key={exam.id}>
                   <div className={styles.examRow}>
                     <div>
@@ -97,16 +99,22 @@ function StudentCoursePageContent() {
                       <div className={styles.value}>{exam.timeWindow}</div>
                     </div>
                     <div className={styles.cta}>
-                      <a
-                        className={`primary-btn ${styles.enterBtn}`}
-                        href={`/student/record?courseId=${exam.courseId}&examId=${exam.id}`}
-                      >
-                        {exam.status === "Not started" ? "Preview" : "Enter Exam"}
-                      </a>
+                      {isEnded ? (
+                        <button className={`primary-btn ${styles.enterBtn} ${styles.disabledBtn}`} type="button" disabled>
+                          Exam Ended
+                        </button>
+                      ) : (
+                        <a
+                          className={`primary-btn ${styles.enterBtn}`}
+                          href={`/student/record?courseId=${exam.courseId}&examId=${exam.id}`}
+                        >
+                          {exam.status === "Not started" ? "Preview" : "Enter Exam"}
+                        </a>
+                      )}
                     </div>
                   </div>
                 </article>
-              ))}
+              )})}
             {!loading && !exams.length && <div className={styles.empty}>No exams available.</div>}
           </div>
         </section>

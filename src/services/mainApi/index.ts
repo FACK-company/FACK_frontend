@@ -14,6 +14,7 @@ export interface ApiFetchOptions {
 const DEFAULT_TIMEOUT_MS = Number(process.env.NEXT_PUBLIC_API_TIMEOUT ?? 30000);
 const AUTH_REFRESH_PATH = "/auth/refresh";
 let refreshInFlight: Promise<string | null> | null = null;
+const AUTH_FAILURE_STATUSES = new Set([401, 403]);
 
 function getCookieValue(name: string): string | null {
 	if (typeof document === "undefined") return null;
@@ -27,6 +28,14 @@ function isUnsafeMethod(method: string): boolean {
 
 function isAuthPath(path: string): boolean {
 	return path.startsWith("/auth/");
+}
+
+function isRecordingPostPath(path: string, method: string): boolean {
+	const m = method.toUpperCase();
+	return (
+		m === "POST" &&
+		(path === "/recordings/chunk" || path === "/recordings/finalize")
+	);
 }
 
 async function refreshAccessToken(baseUrl: string, timeoutMs: number): Promise<string | null> {
@@ -97,7 +106,11 @@ export async function fetchServer<T>({
 		if (!isFormData && !requestHeaders.has("Content-Type")) {
 			requestHeaders.set("Content-Type", "application/json");
 		}
-		const accessToken = getAccessToken();
+		let accessToken = getAccessToken();
+		if (!accessToken && retryOnAuthFailure && !isAuthPath(path)) {
+			const refreshed = await refreshAccessToken(baseUrl, timeout);
+			accessToken = refreshed ?? null;
+		}
 		if (accessToken && !requestHeaders.has("Authorization")) {
 			requestHeaders.set("Authorization", `Bearer ${accessToken}`);
 		}
@@ -130,7 +143,7 @@ export async function fetchServer<T>({
 
 		if (!response.ok) {
 			if (
-				response.status === 401 &&
+				AUTH_FAILURE_STATUSES.has(response.status) &&
 				retryOnAuthFailure &&
 				!isAuthPath(path)
 			) {
@@ -146,6 +159,21 @@ export async function fetchServer<T>({
 						retryOnAuthFailure: false,
 					});
 				}
+				if (!isRecordingPostPath(path, method)) {
+					clearAccessToken();
+					clearUserMetadata();
+					throw new Error("HTTP 401");
+				}
+				throw new Error(`HTTP ${response.status}`);
+			}
+
+			if (AUTH_FAILURE_STATUSES.has(response.status) && !isAuthPath(path)) {
+				if (!isRecordingPostPath(path, method)) {
+					clearAccessToken();
+					clearUserMetadata();
+					throw new Error("HTTP 401");
+				}
+				throw new Error(`HTTP ${response.status}`);
 			}
 			throw new Error(`HTTP ${response.status}`);
 		}

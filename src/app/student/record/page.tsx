@@ -71,6 +71,55 @@ function generateSessionId(): string {
   return `sess_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
 }
 
+type StartGateDecision = {
+  canStart: boolean;
+  remainingSeconds: number;
+  message?: string;
+};
+
+function evaluateStartGate(exam: StudentExamDetailResponse | null, nowMs: number): StartGateDecision {
+  const fullDurationSeconds = deriveDurationSeconds(exam);
+  if (!exam?.startAvailableAt || !exam?.endAvailableAt) {
+    return {
+      canStart: true,
+      remainingSeconds: fullDurationSeconds,
+    };
+  }
+
+  const startMs = new Date(exam.startAvailableAt).getTime();
+  const endMs = new Date(exam.endAvailableAt).getTime();
+  if (Number.isNaN(startMs) || Number.isNaN(endMs)) {
+    return {
+      canStart: true,
+      remainingSeconds: fullDurationSeconds,
+    };
+  }
+
+  if (nowMs < startMs) {
+    return {
+      canStart: false,
+      remainingSeconds: 0,
+      message: "Exam has not started yet. You can begin at the scheduled start time.",
+    };
+  }
+
+  const remainingByWindowSeconds = Math.floor((endMs - nowMs) / 1000);
+  const remainingSeconds = Math.max(0, Math.min(fullDurationSeconds, remainingByWindowSeconds));
+  if (remainingSeconds <= 0) {
+    return {
+      canStart: false,
+      remainingSeconds: 0,
+      message: "Exam start window is closed.",
+    };
+  }
+
+  return {
+    canStart: true,
+    remainingSeconds,
+    message: "Timer is capped by exam end time.",
+  };
+}
+
 function StudentRecordPageContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -89,6 +138,7 @@ function StudentRecordPageContent() {
   const [showWarning, setShowWarning] = useState(true);
   const [isFinalizing, setIsFinalizing] = useState(false);
   const [recordingSessionId, setRecordingSessionId] = useState<string | null>(null);
+  const [nowMs, setNowMs] = useState(Date.now());
 
   const mediaStreamRef = useRef<MediaStream | null>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -192,6 +242,13 @@ function StudentRecordPageContent() {
     };
   }, []);
 
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setNowMs(Date.now());
+    }, 1000);
+    return () => clearInterval(timer);
+  }, []);
+
   const timerText = useMemo(() => {
     const total = Math.max(0, Math.floor(remainingSec));
     const h = String(Math.floor(total / 3600)).padStart(2, "0");
@@ -205,6 +262,7 @@ function StudentRecordPageContent() {
     [exam]
   );
   const totalDurationSec = useMemo(() => deriveDurationSeconds(exam), [exam]);
+  const startGate = useMemo(() => evaluateStartGate(exam, nowMs), [exam, nowMs]);
 
   const enqueueChunkUpload = (sessionId: string, studentId: string, chunk: Blob) => {
     const index = chunkIndexRef.current++;
@@ -230,6 +288,13 @@ function StudentRecordPageContent() {
     const metadata = getUserMetadata();
     if (!metadata?.id) {
       setError("Missing user metadata. Please sign in again.");
+      return;
+    }
+
+    const gateNow = evaluateStartGate(exam, Date.now());
+    if (!gateNow.canStart) {
+      setError(gateNow.message || "Exam cannot be started right now.");
+      setShowWarning(true);
       return;
     }
 
@@ -261,9 +326,13 @@ function StudentRecordPageContent() {
       uploadQueueRef.current = Promise.resolve();
       setRecordingSessionId(sessionId);
       sessionIdRef.current = sessionId;
-      setRemainingSec(totalDurationSec);
+      setRemainingSec(gateNow.remainingSeconds > 0 ? gateNow.remainingSeconds : totalDurationSec);
       setShowWarning(false);
-      setError("");
+      if (gateNow.message) {
+        setError(gateNow.message);
+      } else {
+        setError("");
+      }
       setIsRecording(true);
 
       recorder.ondataavailable = (event) => {
@@ -419,13 +488,15 @@ function StudentRecordPageContent() {
                   <button
                     className="primary-btn"
                     type="button"
-                    disabled={isPermissionPending}
+                    disabled={isPermissionPending || !startGate.canStart}
                     onClick={startRecording}
                   >
                     {isPermissionPending ? "Waiting for permission..." : "Start Recording & Exam"}
                   </button>
                   <div className={`warning ${styles.warningCentered}`}>
-                    Screen recording permission is required to start the exam.
+                    {startGate.canStart
+                      ? "Screen recording permission is required to start the exam."
+                      : (startGate.message || "Exam cannot be started right now.")}
                   </div>
                 </div>
               )}
