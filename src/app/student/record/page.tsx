@@ -95,6 +95,7 @@ function StudentRecordPageContent() {
   const uploadQueueRef = useRef<Promise<void>>(Promise.resolve());
   const chunkIndexRef = useRef(0);
   const sessionIdRef = useRef<string | null>(null);
+  const stopRecorderAndFinalizeRef = useRef<(() => Promise<void>) | undefined>(undefined);
 
   useEffect(() => {
     let isMounted = true;
@@ -135,6 +136,13 @@ function StudentRecordPageContent() {
     }, 1000);
     return () => clearInterval(timer);
   }, [isRecording]);
+
+  // Auto-submit when timer reaches 0
+  useEffect(() => {
+    if (isRecording && remainingSec === 0 && !isFinalizing) {
+      stopRecorderAndFinalizeRef.current?.();
+    }
+  }, [isRecording, remainingSec, isFinalizing]);
 
   useEffect(() => {
     console.log("Recording session ID changed:", recordingSessionId);
@@ -258,6 +266,7 @@ function StudentRecordPageContent() {
 
     setIsFinalizing(true);
     setShowStopModal(false);
+    window.focus();
 
     try {
       const recorder = mediaRecorderRef.current;
@@ -296,6 +305,9 @@ function StudentRecordPageContent() {
       setIsFinalizing(false);
     }
   };
+
+  // Keep the ref in sync with the latest stopRecorderAndFinalize
+  stopRecorderAndFinalizeRef.current = stopRecorderAndFinalize;
 
   return (
     <div className="page bg-record">

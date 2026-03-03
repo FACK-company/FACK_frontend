@@ -48,7 +48,7 @@ export default function AuthBootstrap() {
       const refreshed = await mainApi.bootstrapAuth();
       console.log("AuthBootstrap: Refreshed token", refreshed);
       const token = refreshed?.accessToken ?? getAccessToken();
-
+      console.log("AuthBootstrap: Current access token", token);
       if (!mounted) return;
 
       if (!token) {
