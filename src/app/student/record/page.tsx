@@ -148,6 +148,39 @@ function StudentRecordPageContent() {
     console.log("Recording session ID changed:", recordingSessionId);
   }, [recordingSessionId]);
 
+  // Warn the student before closing/refreshing the tab while recording
+  useEffect(() => {
+    if (!isRecording) return;
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = "";
+    };
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+  }, [isRecording]);
+
+  // Best-effort finalize via sendBeacon when the page is actually being closed
+  useEffect(() => {
+    if (!isRecording) return;
+    const handlePageHide = () => {
+      const currentSessionId = sessionIdRef.current;
+      const metadata = getUserMetadata();
+      if (!currentSessionId || !metadata?.id) return;
+
+      const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL ?? "";
+      const url = `${baseUrl}/recordings/finalize`;
+      const payload = JSON.stringify({
+        sessionId: currentSessionId,
+        examId,
+        studentId: metadata.id,
+        deviceInfo: typeof navigator !== "undefined" ? navigator.userAgent : "unknown",
+      });
+      navigator.sendBeacon(url, new Blob([payload], { type: "application/json" }));
+    };
+    window.addEventListener("pagehide", handlePageHide);
+    return () => window.removeEventListener("pagehide", handlePageHide);
+  }, [isRecording, examId]);
+
   useEffect(() => {
     const updateNetwork = () => setIsOnline(typeof navigator !== "undefined" ? navigator.onLine : true);
     updateNetwork();
