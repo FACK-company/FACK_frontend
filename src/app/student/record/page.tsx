@@ -1,7 +1,7 @@
 ﻿"use client";
 
 import { Suspense, useEffect, useMemo, useRef, useState } from "react";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 import { getUserMetadata, mainApi } from "@/services";
 import StudentNav from "../StudentNav";
 import LoadingState from "@/components/LoadingState";
@@ -73,6 +73,7 @@ function generateSessionId(): string {
 
 function StudentRecordPageContent() {
   const searchParams = useSearchParams();
+  const router = useRouter();
   const courseId = searchParams.get("courseId") || "cs207";
   const examId = searchParams.get("examId") || "final-exam";
 
@@ -271,6 +272,12 @@ function StudentRecordPageContent() {
       setRecordingSessionId(null);
       setRemainingSec(0);
       setShowStopModal(false);
+
+      const params = new URLSearchParams();
+      params.set("courseId", courseId);
+      if (exam?.courseCode) params.set("courseCode", exam.courseCode);
+      if (exam?.title) params.set("examTitle", exam.title);
+      router.replace(`/student/record/complete?${params.toString()}`);
     } catch {
       setError("Unable to finalize recording. Please retry ending the exam.");
     }
