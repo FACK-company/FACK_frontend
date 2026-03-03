@@ -82,7 +82,6 @@ function StudentRecordPageContent() {
   const [isRecording, setIsRecording] = useState(false);
   const [remainingSec, setRemainingSec] = useState(0);
   const [isOnline, setIsOnline] = useState(true);
-  const [showPermissionModal, setShowPermissionModal] = useState(false);
   const [isPermissionPending, setIsPermissionPending] = useState(false);
   const [showStopModal, setShowStopModal] = useState(false);
   const [showWarning, setShowWarning] = useState(true);
@@ -192,6 +191,17 @@ function StudentRecordPageContent() {
         audio: true,
       });
 
+      // Enforce full-screen share (not a tab or window)
+      const videoTrack = stream.getVideoTracks()[0];
+      const trackSettings = videoTrack.getSettings() as MediaTrackSettings & { displaySurface?: string };
+      if (trackSettings.displaySurface && trackSettings.displaySurface !== "monitor") {
+        stream.getTracks().forEach((t) => t.stop());
+        // setError("Please share your ENTIRE SCREEN, not a tab or window.");
+        alert("Please share your ENTIRE SCREEN, not a tab or window.");
+        setIsPermissionPending(false);
+        return;
+      }
+
       const sessionId = generateSessionId();
       const mimeType = getRecordingMimeType();
       const recorder = new MediaRecorder(stream, { mimeType });
@@ -202,7 +212,6 @@ function StudentRecordPageContent() {
       uploadQueueRef.current = Promise.resolve();
       setRecordingSessionId(sessionId);
       setRemainingSec(totalDurationSec);
-      setShowPermissionModal(false);
       setShowWarning(false);
       setError("");
       setIsRecording(true);
@@ -221,9 +230,8 @@ function StudentRecordPageContent() {
 
       recorder.start(4000);
     } catch {
-      setError("Screen recording permission denied or not available.");
+      // setError("Screen recording permission denied or not available.");
       setIsRecording(false);
-      setShowPermissionModal(false);
       setShowWarning(true);
     } finally {
       setIsPermissionPending(false);
@@ -337,8 +345,13 @@ function StudentRecordPageContent() {
             <section className="panel right">
               {!isRecording && (
                 <div className="actions">
-                  <button className="primary-btn" type="button" onClick={() => setShowPermissionModal(true)}>
-                    Start Recording &amp; Exam
+                  <button
+                    className="primary-btn"
+                    type="button"
+                    disabled={isPermissionPending}
+                    onClick={startRecording}
+                  >
+                    {isPermissionPending ? "Waiting for permission..." : "Start Recording & Exam"}
                   </button>
                   <div className={`warning ${styles.warningCentered}`}>
                     Screen recording permission is required to start the exam.
@@ -358,41 +371,6 @@ function StudentRecordPageContent() {
       >
         End Exam
       </button>
-
-      {showPermissionModal && (
-        <div className="modal show">
-          <div className="modal-card" role="dialog" aria-modal="true">
-            <h3>Allow screen recording?</h3>
-            <p>We need your permission to record your screen before starting the exam.</p>
-            {isPermissionPending && (
-              <p className={styles.permissionPendingText}>
-                Please wait a moment while the browser asks for screen-sharing permission.
-              </p>
-            )}
-            <div className="modal-actions">
-              <button
-                className={styles.modalDenyBtn}
-                type="button"
-                disabled={isPermissionPending}
-                onClick={() => {
-                  setShowPermissionModal(false);
-                  setShowWarning(true);
-                }}
-              >
-                Deny
-              </button>
-              <button
-                className={styles.modalPrimaryBtn}
-                type="button"
-                disabled={isPermissionPending}
-                onClick={startRecording}
-              >
-                {isPermissionPending ? "Waiting..." : "Allow"}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
 
       {showStopModal && (
         <div className="modal show">
