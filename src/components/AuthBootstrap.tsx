@@ -1,8 +1,10 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import {
+  clearAccessToken,
+  clearUserMetadata,
   getAccessToken,
   getUserMetadata,
   mainApi,
@@ -30,9 +32,10 @@ function isProtectedPath(pathname: string): boolean {
   return pathname.startsWith("/student") || pathname.startsWith("/prof");
 }
 
-export default function AuthBootstrap() {
+export default function AuthBootstrap({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
+  const [authReady, setAuthReady] = useState(false);
 
   useEffect(() => {
     let mounted = true;
@@ -40,22 +43,24 @@ export default function AuthBootstrap() {
     async function bootstrap() {
       if (!pathname) return;
 
-      const needsAuth = isProtectedPath(pathname);
-      let token = getAccessToken();
+      setAuthReady(false);
 
-      if (!token) {
-        const refreshed = await mainApi.bootstrapAuth();
-        token = refreshed?.accessToken ?? getAccessToken();
-      }
-
+      // Always refresh on every navigation to keep the session alive
+      const refreshed = await mainApi.bootstrapAuth();
+      const token = refreshed?.accessToken ?? getAccessToken();
       if (!mounted) return;
 
-      if (!token && needsAuth) {
-        router.replace("/login");
+      if (!token) {
+        // Refresh failed — clear session and redirect to login
+        clearAccessToken();
+        clearUserMetadata();
+        if (!isPublicPath(pathname)) {
+          router.replace("/login");
+          return;
+        }
+        setAuthReady(true);
         return;
       }
-
-      if (!token) return;
 
       const currentMetadata = getUserMetadata() || {};
       const payload = decodeJwtPayload(token);
@@ -88,15 +93,21 @@ export default function AuthBootstrap() {
 
       if (!isPublicPath(pathname) && !isProtectedPath(pathname)) {
         router.replace(role === "professor" ? "/prof/home" : "/student/home");
+        return;
       }
+
+      // Auth is resolved and no redirect needed — allow children to render
+      setAuthReady(true);
     }
 
     void bootstrap();
-
     return () => {
       mounted = false;
     };
   }, [pathname, router]);
 
-  return null;
+  // Don't render children until auth check completes
+  if (!authReady) return null;
+
+  return <>{children}</>;
 }
