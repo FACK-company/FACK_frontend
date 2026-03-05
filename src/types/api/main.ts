@@ -192,6 +192,8 @@ export interface StudentExamSummary {
   status: "Not started" | "In progress" | "Ended" | "Submitted";
   timeWindow: string;
   durationMinutes: number;
+  startAvailableAt?: string;
+  endAvailableAt?: string;
 }
 
 export interface StudentCourseExamsResponse {
