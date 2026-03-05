@@ -32,6 +32,13 @@ function isProtectedPath(pathname: string): boolean {
   return pathname.startsWith("/student") || pathname.startsWith("/prof");
 }
 
+function isTokenExpired(token: string): boolean {
+  const payload = decodeJwtPayload(token);
+  const exp = Number(payload?.exp ?? 0);
+  if (!exp) return true;
+  return Date.now() >= exp * 1000;
+}
+
 export default function AuthBootstrap({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
@@ -44,17 +51,19 @@ export default function AuthBootstrap({ children }: { children: React.ReactNode 
       if (!pathname) return;
 
       setAuthReady(false);
+      const needsAuth = isProtectedPath(pathname);
 
-      // Always refresh on every navigation to keep the session alive
-      const refreshed = await mainApi.bootstrapAuth();
-      const token = refreshed?.accessToken ?? getAccessToken();
+      let token = getAccessToken();
+      if (!token || isTokenExpired(token)) {
+        const refreshed = await mainApi.bootstrapAuth();
+        token = refreshed?.accessToken ?? getAccessToken();
+      }
       if (!mounted) return;
 
       if (!token) {
-        // Refresh failed — clear session and redirect to login
         clearAccessToken();
         clearUserMetadata();
-        if (!isPublicPath(pathname)) {
+        if (needsAuth) {
           router.replace("/login");
           return;
         }
@@ -96,7 +105,6 @@ export default function AuthBootstrap({ children }: { children: React.ReactNode 
         return;
       }
 
-      // Auth is resolved and no redirect needed — allow children to render
       setAuthReady(true);
     }
 
@@ -106,7 +114,6 @@ export default function AuthBootstrap({ children }: { children: React.ReactNode 
     };
   }, [pathname, router]);
 
-  // Don't render children until auth check completes
   if (!authReady) return null;
 
   return <>{children}</>;

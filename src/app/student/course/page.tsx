@@ -99,11 +99,7 @@ function StudentCoursePageContent() {
                       <div className={styles.value}>{exam.timeWindow}</div>
                     </div>
                     <div className={styles.cta}>
-                      {isEnded ? (
-                        <button className={`primary-btn ${styles.enterBtn} ${styles.disabledBtn}`} type="button" disabled>
-                          Exam Ended
-                        </button>
-                      ) : (
+                      {!isEnded && (
                         <a
                           className={`primary-btn ${styles.enterBtn}`}
                           href={`/student/record?courseId=${exam.courseId}&examId=${exam.id}`}
@@ -111,6 +107,7 @@ function StudentCoursePageContent() {
                           {exam.status === "Not started" ? "Preview" : "Enter Exam"}
                         </a>
                       )}
+                      {isEnded && <div className={styles.ctaSpacer} aria-hidden="true" />}
                     </div>
                   </div>
                 </article>

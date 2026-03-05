@@ -63,10 +63,9 @@
   min-width:160px;
 }
 
-.disabledBtn{
-  opacity:.55;
-  cursor:not-allowed;
-  pointer-events:none;
+.ctaSpacer{
+  min-width:160px;
+  height:46px;
 }
 
 .badge{

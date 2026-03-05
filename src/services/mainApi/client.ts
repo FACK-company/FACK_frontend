@@ -635,6 +635,8 @@ export const mainApi = {
         status: toStudentExamStatus(exam.startAvailableAt, exam.endAvailableAt),
         timeWindow: formatTimeWindow(exam.startAvailableAt, exam.endAvailableAt),
         durationMinutes: exam.durationMinutes || 0,
+        startAvailableAt: exam.startAvailableAt,
+        endAvailableAt: exam.endAvailableAt,
       })),
     };
   },
@@ -669,6 +671,8 @@ export const mainApi = {
           status: toStudentExamStatus(exam.startAvailableAt, exam.endAvailableAt),
           timeWindow: formatTimeWindow(exam.startAvailableAt, exam.endAvailableAt),
           durationMinutes: exam.durationMinutes || 0,
+          startAvailableAt: exam.startAvailableAt,
+          endAvailableAt: exam.endAvailableAt,
         },
       };
     } catch {
@@ -744,6 +748,8 @@ export const mainApi = {
       durationMinutes: exam.durationMinutes || 0,
       description: exam.description || "",
       examFileUrl: exam.examFileUrl || "/files/CS201_Spring_2026_HW2.pdf",
+      startAvailableAt: exam.startAvailableAt,
+      endAvailableAt: exam.endAvailableAt,
     };
   },
 
