@@ -7,19 +7,6 @@ services:
         NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL:-http://10.212.8.136:8080/api}
         NEXT_PUBLIC_API_TIMEOUT: ${NEXT_PUBLIC_API_TIMEOUT:-30000}
     container_name: fack-frontend
-    expose:
-      - "3000"
-    restart: unless-stopped
-
-  nginx:
-    image: nginx:alpine
-    container_name: fack-nginx
     ports:
-      - "443:443"
-      - "80:80"
-    volumes:
-      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
-      - ./certs:/etc/nginx/certs:ro
-    depends_on:
-      - fack-frontend
+      - "3000:3000"
     restart: unless-stopped
