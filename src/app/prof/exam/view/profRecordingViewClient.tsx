@@ -85,7 +85,10 @@ export default function ProfRecordingViewClient({
     if (sessionData?.status !== "running") return;
 
     const timer = setInterval(() => {
-      setLiveVersion((prev) => prev + 1);
+      const video = videoRef.current;
+      if (!video || video.paused || video.ended) {
+        setLiveVersion((prev) => prev + 1);
+      }
     }, 4000);
 
     return () => clearInterval(timer);
@@ -223,8 +226,19 @@ export default function ProfRecordingViewClient({
                       ref={videoRef}
                       className={styles.videoPlayer}
                       controls
+                      autoPlay={sessionData.status === "running"}
                       preload="metadata"
                       src={streamUrl}
+                      onLoadedData={() => {
+                        if (sessionData.status === "running") {
+                          videoRef.current?.play().catch(() => {});
+                        }
+                      }}
+                      onEnded={() => {
+                        if (sessionData.status === "running") {
+                          setLiveVersion((prev) => prev + 1);
+                        }
+                      }}
                     />
                     <div className={styles.videoActions}>
                       <a
