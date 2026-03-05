@@ -416,6 +416,27 @@ type BackendExamResponse = {
   endAvailableAt?: string;
 };
 
+function mapSessionStatusToRecordingStatus(
+  status?: string
+): "Completed" | "Interrupted" | "Missing" {
+  const normalized = String(status ?? "").toLowerCase();
+  if (normalized === "submitted") return "Completed";
+  if (normalized === "terminated") return "Interrupted";
+  return "Missing";
+}
+
+function formatDurationFromSession(start?: string | null, end?: string | null): string {
+  if (!start || !end) return "-";
+  const startMs = new Date(start).getTime();
+  const endMs = new Date(end).getTime();
+  if (Number.isNaN(startMs) || Number.isNaN(endMs) || endMs <= startMs) return "-";
+  const totalSeconds = Math.floor((endMs - startMs) / 1000);
+  const hh = String(Math.floor(totalSeconds / 3600)).padStart(2, "0");
+  const mm = String(Math.floor((totalSeconds % 3600) / 60)).padStart(2, "0");
+  const ss = String(totalSeconds % 60).padStart(2, "0");
+  return `${hh}:${mm}:${ss}`;
+}
+
 type UploadRecordingChunkPayload = {
   sessionId: string;
   examId: string;
@@ -992,12 +1013,46 @@ export const mainApi = {
     if (MOCK_SERVER_TRUE) {
       return { recordings: PLACEHOLDERS.recordings };
     }
-
-    return fetchServer<ProfessorRecordingsResponse>({
+    const exams = await fetchServer<BackendExamResponse[]>({
       baseUrl: mainApiBaseUrl,
-      path: "/prof/recordings",
+      path: "/exams",
       method: "GET",
     });
+
+    const sessionsByExam = await Promise.all(
+      (exams ?? []).map(async (exam) => {
+        try {
+          const sessions = await fetchServer<ExamSession[]>({
+            baseUrl: mainApiBaseUrl,
+            path: `/exam-sessions/by-exam/${exam.id}`,
+            method: "GET",
+          });
+          return { exam, sessions: sessions ?? [] };
+        } catch {
+          return { exam, sessions: [] as ExamSession[] };
+        }
+      })
+    );
+
+    const recordings: ProfessorRecordingListItem[] = sessionsByExam
+      .flatMap(({ exam, sessions }) =>
+        sessions
+          .filter((s) => Boolean(s.screenRecordingPath))
+          .map((s) => ({
+            sessionId: s.id,
+            courseId: exam.courseId,
+            examId: exam.id,
+            studentName: s.student?.name || s.studentId || "Unknown Student",
+            examName: exam.title || exam.id,
+            classCode: (exam.courseId || "").toUpperCase(),
+            status: mapSessionStatusToRecordingStatus(s.status),
+            duration: formatDurationFromSession(s.startTime, s.endTime),
+            videoPath: `${mainApiBaseUrl}/recordings/stream/${s.id}`,
+          }))
+      )
+      .sort((a, b) => b.sessionId.localeCompare(a.sessionId));
+
+    return { recordings };
   },
 
   async getExamSessions(examId: string): Promise<ExamSession[]> {
@@ -1017,7 +1072,7 @@ export const mainApi = {
   },
 
   getSessionRecordingUrl(sessionId: string): string {
-    return `${mainApiBaseUrl}/recordings/by-session/${sessionId}`;
+    return `${mainApiBaseUrl}/recordings/stream/${sessionId}`;
   },
 
   async addRecordingComment(

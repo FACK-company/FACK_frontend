@@ -16,6 +16,7 @@ export default function ProfRecordings() {
 
   useEffect(() => {
     let isMounted = true;
+    let timer: ReturnType<typeof setInterval> | null = null;
 
     async function loadData() {
       try {
@@ -33,10 +34,14 @@ export default function ProfRecordings() {
       }
     }
 
-    loadData();
+    void loadData();
+    timer = setInterval(() => {
+      void loadData();
+    }, 10000);
 
     return () => {
       isMounted = false;
+      if (timer) clearInterval(timer);
     };
   }, []);
 

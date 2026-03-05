@@ -185,6 +185,7 @@ export default function ProfExamClient({
 
   useEffect(() => {
     let isMounted = true;
+    let timer: ReturnType<typeof setInterval> | null = null;
 
     const loadExamSessions = async () => {
       setRecordingsLoading(true);
@@ -206,11 +207,15 @@ export default function ProfExamClient({
     };
 
     if (examId) {
-      loadExamSessions();
+      void loadExamSessions();
+      timer = setInterval(() => {
+        void loadExamSessions();
+      }, 10000);
     }
 
     return () => {
       isMounted = false;
+      if (timer) clearInterval(timer);
     };
   }, [examId]);
 
@@ -469,7 +474,7 @@ export default function ProfExamClient({
                 return `${durationMin} min`;
               };
               const duration = calculateDuration();
-              const hasRecording = Boolean(session.screenRecordingPath);
+              const canViewSession = Boolean(session.screenRecordingPath) || session.status === "running";
               
               return (
                 <div
@@ -482,7 +487,7 @@ export default function ProfExamClient({
                     className={`status-pill ${
                       session.status === "submitted"
                         ? "complete"
-                        : session.status === "in_progress"
+                        : session.status === "running" || session.status === "in_progress"
                         ? "interrupted"
                         : "missing"
                     }`}
@@ -490,12 +495,12 @@ export default function ProfExamClient({
                     {session.status}
                   </div>
                   <div>{duration}</div>
-                  {hasRecording ? (
+                  {canViewSession ? (
                     <a
                       className="primary-btn"
                       href={`/prof/recordings/view?courseId=${courseId}&examId=${examId}&sessionId=${session.id}`}
                     >
-                      View
+                      {session.status === "running" ? "View live" : "View"}
                     </a>
                   ) : (
                     <div className={styles.noRecording}>No recording</div>
