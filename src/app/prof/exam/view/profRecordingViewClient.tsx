@@ -39,6 +39,7 @@ export default function ProfRecordingViewClient({
   const [username, setUsername] = useState("prof_username");
   const [isLoading, setIsLoading] = useState(true);
   const [isMounted, setIsMounted] = useState(false);
+  const [liveVersion, setLiveVersion] = useState(0);
 
   const videoRef = useRef<HTMLVideoElement | null>(null);
 
@@ -79,6 +80,16 @@ export default function ProfRecordingViewClient({
     // console.log("User metadata:", metadata);
     setUsername(metadata?.name?.trim() || "prof_username");
   }, []);
+
+  useEffect(() => {
+    if (sessionData?.status !== "running") return;
+
+    const timer = setInterval(() => {
+      setLiveVersion((prev) => prev + 1);
+    }, 4000);
+
+    return () => clearInterval(timer);
+  }, [sessionData?.status]);
 
   const formatDateTime = (dateString: string) => {
     if (!isMounted) return "Loading...";
@@ -131,6 +142,11 @@ export default function ProfRecordingViewClient({
     const durationMin = Math.round(durationSec / 60);
     return `${durationMin} min`;
   };
+
+  const streamUrl =
+    videoUrl && sessionData?.status === "running"
+      ? `${videoUrl}${videoUrl.includes("?") ? "&" : "?"}live=${liveVersion}`
+      : videoUrl;
 
   return (
     <div className={`page ${styles.pageBg}`}>
@@ -198,14 +214,17 @@ export default function ProfRecordingViewClient({
               </section>
 
               <div className={styles.contentGrid}>
-                {videoUrl && sessionData.screenRecordingPath ? (
+                {videoUrl && (sessionData.screenRecordingPath || sessionData.status === "running") ? (
                   <section className={`player ${styles.player}`}>
+                    {sessionData.status === "running" && (
+                      <div className={styles.emptyText}>Live preview (running session). Refresh to get newest chunks.</div>
+                    )}
                     <video
                       ref={videoRef}
                       className={styles.videoPlayer}
                       controls
                       preload="metadata"
-                      src={videoUrl}
+                      src={streamUrl}
                     />
                     <div className={styles.videoActions}>
                       <a
