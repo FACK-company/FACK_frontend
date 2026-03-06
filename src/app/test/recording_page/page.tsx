@@ -178,18 +178,20 @@ export default function RecordingPage() {
         queueRef.current = [];
         chunkIndexRef.current = 0;
         sessionIdRef.current = newSessionId();
-
+        console.log('🆕 New recording session:', sessionIdRef.current);
         let stream: MediaStream;
         try {
+            console.log('Requesting screen share with constraints: 1280x720 @ 15fps');
             stream = await navigator.mediaDevices.getDisplayMedia({
                 video: { width: { ideal: 1280 }, height: { ideal: 720 }, frameRate: { ideal: 15 } },
                 audio: false,
             });
         } catch {
+            console.log('Screen share permission denied or cancelled by user.');
             setStatus({ kind: 'error', message: 'Screen share was cancelled or denied.' });
             return;
         }
-
+        console.log('Screen share granted. Stream tracks:', stream.getTracks().map((t) => t.label).join(', '));
         // Enforce full-screen share (not a tab or window)
         const videoTrack = stream.getVideoTracks()[0];
         const trackSettings = videoTrack.getSettings() as MediaTrackSettings & { displaySurface?: string };
