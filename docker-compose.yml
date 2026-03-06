@@ -10,17 +10,3 @@ services:
     ports:
       - "3000:3000"  # Restored for direct access
     restart: unless-stopped
-
-  nginx:
-    image: nginx:latest
-    container_name: fack-nginx
-    ports:
-      - "80:80"
-      - "443:443"
-    volumes:
-      # Note: using conf.d/default.conf is standard for the official nginx image
-      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
-      - ./certs:/etc/nginx/certs:ro
-    depends_on:
-      - fack-frontend
-    restart: unless-stopped
