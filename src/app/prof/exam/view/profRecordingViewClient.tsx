@@ -40,23 +40,51 @@ export default function ProfRecordingViewClient({
   const [isLoading, setIsLoading] = useState(true);
   const [isMounted, setIsMounted] = useState(false);
   const [liveVersion, setLiveVersion] = useState(0);
+  const [finalizing, setFinalizing] = useState(false);
+  const [finalized, setFinalized] = useState(false);
 
   const videoRef = useRef<HTMLVideoElement | null>(null);
 
   useEffect(() => {
     let isMounted = true;
 
-    async function load() {
-      setIsLoading(true);
+    async function finalizeIfLive() {
+      setFinalizing(true);
       setError("");
       try {
+        // Fetch session metadata first
         const metadata = await mainApi.getExamSessionMetadata(sessionId);
-        const url = mainApi.getSessionRecordingUrl(sessionId);
-        
         if (!isMounted) return;
         setSessionData(metadata);
+
+        // If session is running (live), finalize it before streaming
+        if (metadata.status === "running") {
+          try {
+            console.log("Finalizing live recording for session:", sessionId);
+            console.log("Metadata:", metadata);
+            console.log("examId:", examId);
+            console.log("User agent:", typeof navigator !== "undefined" ? navigator.userAgent : "unknown");
+            await mainApi.finalizeRecording({
+              sessionId: sessionId,
+              examId,
+              studentId: metadata.student.id,
+              deviceInfo: typeof navigator !== "undefined" ? navigator.userAgent : "unknown",
+            });
+            setFinalized(true);
+          } catch (err) {
+            // If finalize fails, show error but allow retry
+            setError("Failed to finalize live video. Please try again.");
+            setFinalized(false);
+            setFinalizing(false);
+            return;
+          }
+        } else {
+          setFinalized(true);
+        }
+
+        // After finalize (or if not live), get video URL
+        const url = mainApi.getSessionRecordingUrl(sessionId);
         setVideoUrl(url);
-        // Comments can be loaded separately if needed
         setComments([]);
       } catch (err) {
         if (!isMounted) return;
@@ -64,15 +92,16 @@ export default function ProfRecordingViewClient({
         setError("Unable to load recording detail.");
       } finally {
         if (isMounted) setIsLoading(false);
+        setFinalizing(false);
       }
     }
 
-    load();
+    finalizeIfLive();
 
     return () => {
       isMounted = false;
     };
-  }, [sessionId]);
+  }, [sessionId, examId]);
 
   useEffect(() => {
     setIsMounted(true);
@@ -146,11 +175,8 @@ export default function ProfRecordingViewClient({
     return `${durationMin} min`;
   };
 
-  const streamUrl =
-    videoUrl && sessionData?.status === "running"
-      ? `${videoUrl}${videoUrl.includes("?") ? "&" : "?"}live=${liveVersion}`
-      : videoUrl;
-
+  const streamUrl = videoUrl;
+  // ...existing code...
   return (
     <div className={`page ${styles.pageBg}`}>
       <ProfNav username={username} />
@@ -158,66 +184,63 @@ export default function ProfRecordingViewClient({
       <main className="main">
         <section className="frame">
           {isLoading && <div className={styles.emptyText}>Loading recording...</div>}
-          
-          {!isLoading && (
+          {finalizing && <div className={styles.emptyText}>Finalizing live video...</div>}
+          {error && <div className={styles.errorBanner}>{error}</div>}
+          {!isLoading && finalized && (
             <>
               <div className="page-title">
                 Recording Detail
-                {sessionData ? ` — ${sessionData.student.name} (${sessionData.student.email})` : ""}
+                {sessionData ? ` — ${sessionData.student?.name ?? ""} (${sessionData.student?.email ?? ""})` : ""}
               </div>
 
-              {error && <div className={styles.errorBanner}>{error}</div>}
-
               {sessionData && (
-            <>
-              <section className={`detail-card ${styles.detailCard}`}>
-                <div className="row">
-                  <div>
-                    <div className="label">Exam ID</div>
-                    <div className="value">{sessionData.examId}</div>
+                <section className={`detail-card ${styles.detailCard}`}>
+                  <div className="row">
+                    <div>
+                      <div className="label">Exam ID</div>
+                      <div className="value">{sessionData.examId}</div>
+                    </div>
+                    <span
+                      className={`badge ${sessionData.status === "submitted" ? "submitted" : "not-started"}`}
+                    >
+                      {sessionData.status}
+                    </span>
                   </div>
-                  <span
-                    className={`badge ${
-                      sessionData.status === "submitted" ? "submitted" : "not-started"
-                    }`}
-                  >
-                    {sessionData.status}
-                  </span>
-                </div>
-                <div className={styles.metaGrid}>
-                  <div>
-                    <div className="label">Student</div>
-                    <div className="value">{sessionData.student.name}</div>
-                  </div>
-                  <div>
-                    <div className="label">Start time</div>
-                    <div className="value">{formatDateTime(sessionData.startTime)}</div>
-                  </div>
-                  <div>
-                    <div className="label">End time</div>
-                    <div className="value">{sessionData.endTime ? formatDateTime(sessionData.endTime) : "In progress"}</div>
-                  </div>
-                  <div>
-                    <div className="label">Duration</div>
-                    <div className="value">{calculateDuration()}</div>
-                  </div>
-                </div>
-                {sessionData.browserInfo && (
                   <div className={styles.metaGrid}>
                     <div>
-                      <div className="label">Browser Info</div>
-                      <div className="value" style={{ fontSize: "12px" }}>{sessionData.browserInfo}</div>
+                      <div className="label">Student</div>
+                      <div className="value">{sessionData.student?.name ?? ""}</div>
                     </div>
                     <div>
-                      <div className="label">IP Address</div>
-                      <div className="value">{sessionData.ipAddress || "—"}</div>
+                      <div className="label">Start time</div>
+                      <div className="value">{formatDateTime(sessionData.startTime)}</div>
+                    </div>
+                    <div>
+                      <div className="label">End time</div>
+                      <div className="value">{sessionData.endTime ? formatDateTime(sessionData.endTime) : "In progress"}</div>
+                    </div>
+                    <div>
+                      <div className="label">Duration</div>
+                      <div className="value">{calculateDuration()}</div>
                     </div>
                   </div>
-                )}
-              </section>
+                  {sessionData.browserInfo && (
+                    <div className={styles.metaGrid}>
+                      <div>
+                        <div className="label">Browser Info</div>
+                        <div className="value" style={{ fontSize: "12px" }}>{sessionData.browserInfo}</div>
+                      </div>
+                      <div>
+                        <div className="label">IP Address</div>
+                        <div className="value">{sessionData.ipAddress || "—"}</div>
+                      </div>
+                    </div>
+                  )}
+                </section>
+              )}
 
               <div className={styles.contentGrid}>
-                {videoUrl && (sessionData.screenRecordingPath || sessionData.status === "running") ? (
+                {videoUrl && sessionData && (sessionData.screenRecordingPath || sessionData.status === "running") ? (
                   <section className={`player ${styles.player}`}>
                     {sessionData.status === "running" && (
                       <div className={styles.emptyText}>Live preview (running session). Refresh to get newest chunks.</div>
@@ -230,12 +253,12 @@ export default function ProfRecordingViewClient({
                       preload="metadata"
                       src={streamUrl}
                       onLoadedData={() => {
-                        if (sessionData.status === "running") {
+                        if (sessionData && sessionData.status === "running") {
                           videoRef.current?.play().catch(() => {});
                         }
                       }}
                       onEnded={() => {
-                        if (sessionData.status === "running") {
+                        if (sessionData && sessionData.status === "running") {
                           setLiveVersion((prev) => prev + 1);
                         }
                       }}
@@ -296,9 +319,7 @@ export default function ProfRecordingViewClient({
                   </div>
                 </section>
               </div>
-              </>
-            )}
-          </>
+            </>
           )}
         </section>
       </main>

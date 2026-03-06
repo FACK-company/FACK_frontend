@@ -383,7 +383,7 @@ function StudentRecordPageContent() {
       mediaStreamRef.current = null;
 
       await uploadQueueRef.current;
-
+      console.log("payload: ", { sessionId: currentSessionId, examId, studentId: metadata.id });
       await mainApi.finalizeRecording({
         sessionId: currentSessionId,
         examId,
