@@ -451,6 +451,7 @@ type FinalizeRecordingPayload = {
   examId: string;
   studentId: string;
   deviceInfo?: string;
+  preview?: boolean;
 };
 
 function formatMonthDayTime(dateLike?: string): { monthDay: string; time: string } {
@@ -723,6 +724,15 @@ export const mainApi = {
     await fetchServer({
       baseUrl: mainApiBaseUrl,
       path: "/recordings/finalize",
+      method: "POST",
+      body: payload,
+    });
+  },
+
+   async previewRecording(payload: FinalizeRecordingPayload): Promise<void> {
+    await fetchServer({
+      baseUrl: mainApiBaseUrl,
+      path: "/recordings/finalize?preview=true",
       method: "POST",
       body: payload,
     });

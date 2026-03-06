@@ -64,7 +64,7 @@ export default function ProfRecordingViewClient({
             console.log("Metadata:", metadata);
             console.log("examId:", examId);
             console.log("User agent:", typeof navigator !== "undefined" ? navigator.userAgent : "unknown");
-            await mainApi.finalizeRecording({
+            await mainApi.previewRecording({
               sessionId: sessionId,
               examId,
               studentId: metadata.student.id,
