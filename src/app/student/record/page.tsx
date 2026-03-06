@@ -286,19 +286,23 @@ function StudentRecordPageContent() {
 
   const startRecording = async () => {
     const metadata = getUserMetadata();
+    console.log("Starting recording with user metadata:", metadata);
     if (!metadata?.id) {
+      console.log("Missing user metadata. Cannot start recording.");
       setError("Missing user metadata. Please sign in again.");
       return;
     }
-
+    console.log("Evaluating start gate with exam data:", exam);
     const gateNow = evaluateStartGate(exam, Date.now());
     if (!gateNow.canStart) {
+      console.log("Start gate evaluation failed:", gateNow.message);
       setError(gateNow.message || "Exam cannot be started right now.");
       setShowWarning(true);
       return;
     }
 
     try {
+      console.log("Requesting screen recording permission...");
       setIsPermissionPending(true);
       const stream = await navigator.mediaDevices.getDisplayMedia({
         video: true,
@@ -315,7 +319,7 @@ function StudentRecordPageContent() {
         setIsPermissionPending(false);
         return;
       }
-
+      console.log("Screen recording permission granted. Starting recorder...");
       const sessionId = generateSessionId();
       const mimeType = getRecordingMimeType();
       const recorder = new MediaRecorder(stream, { mimeType });
@@ -330,6 +334,7 @@ function StudentRecordPageContent() {
       setShowWarning(false);
       if (gateNow.message) {
         setError(gateNow.message);
+        console.log("Start gate evaluation failed:", gateNow.message);
       } else {
         setError("");
       }
