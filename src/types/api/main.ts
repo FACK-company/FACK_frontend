@@ -83,6 +83,45 @@ export interface AddProfessorCourseStudentRequest {
   email: string;
 }
 
+export interface CsvBatchUploadRequest {
+  courseId: string;
+  nameColumnIndex?: number;
+  emailColumnIndex: number;
+  csvContent: string;
+  hasHeaderRow?: boolean;
+  separateNameColumns?: boolean;
+  firstNameColumnIndex?: number;
+  lastNameColumnIndex?: number;
+}
+
+export type CsvImportParams = Omit<CsvBatchUploadRequest, "csvContent">;
+
+export interface CsvEnrollmentResult {
+  studentId?: string;
+  name?: string;
+  email?: string;
+  enrollmentId?: string;
+  status?: string;
+  message?: string;
+}
+
+export interface CsvBatchEnrollmentResponse {
+  courseId: string;
+  totalRecords: number;
+  successCount: number;
+  skippedCount: number;
+  errorCount: number;
+  results: CsvEnrollmentResult[];
+  timestamp?: string;
+}
+
+export interface CsvPreviewResponse {
+  columns: string[];
+  sampleRows: string[][];
+  totalRows: number;
+  hasHeader: boolean;
+}
+
 export interface ProfessorExamSessionRow {
   id: string;
   studentName: string;

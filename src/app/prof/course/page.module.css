@@ -29,6 +29,29 @@
   margin-bottom:10px;
 }
 
+.studentHeadRow{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  margin-bottom:10px;
+}
+
+.studentHeadRow .sectionTitle{
+  margin-bottom:0;
+}
+
+.addPeopleBtn{
+  height:40px;
+  min-width:140px;
+  border-radius:4px;
+  border:1px solid rgba(0,25,110,.25);
+  background:#fff;
+  color:var(--navy);
+  font-weight:700;
+  cursor:pointer;
+}
+
 .examHead{
   display:flex;
   align-items:center;
@@ -50,7 +73,7 @@
 
 .addRow{
   display:grid;
-  grid-template-columns: repeat(8, minmax(0, 1fr));
+  grid-template-columns: repeat(6, minmax(0, 1fr));
   gap:10px;
   margin-bottom:10px;
 }
@@ -63,9 +86,6 @@
   grid-column: span 2;
 }
 
-.addRow .textInput:nth-of-type(3){
-  grid-column: span 2;
-}
 
 .textInput{
   height:44px;
@@ -114,12 +134,14 @@
   border:1px solid rgba(0,25,110,.12);
   border-radius:4px;
   overflow:hidden;
+  max-height:360px;
+  overflow:auto;
 }
 
 .studentHead,
 .studentRow{
   display:grid;
-  grid-template-columns: 1fr 1fr 1.8fr;
+  grid-template-columns: 1.4fr 1.6fr;
   gap:10px;
   align-items:center;
   padding:12px 14px;
@@ -189,6 +211,108 @@
   font-size:22px;
   font-weight:800;
   color:var(--navy);
+}
+
+.modalSection{
+  margin-bottom:14px;
+}
+
+.tabRow{
+  display:flex;
+  gap:8px;
+  margin-bottom:12px;
+}
+
+.tabBtn{
+  height:36px;
+  min-width:120px;
+  padding:0 14px;
+  border-radius:999px;
+  border:1px solid rgba(0,25,110,.25);
+  background:#fff;
+  color:rgba(0,25,110,.8);
+  font-weight:700;
+  cursor:pointer;
+}
+
+.tabBtnActive{
+  background:rgba(0,25,110,.08);
+  color:var(--navy);
+  border-color:rgba(0,25,110,.45);
+}
+
+.modalSubTitle{
+  margin-bottom:8px;
+  font-size:12px;
+  letter-spacing:.08em;
+  text-transform:uppercase;
+  color:rgba(0,25,110,.65);
+  font-weight:800;
+}
+
+.csvHint{
+  margin-top:6px;
+  font-size:12px;
+  color:rgba(0,25,110,.65);
+}
+
+.csvHint span{
+  font-weight:800;
+  color:rgba(0,25,110,.85);
+}
+
+.csvPreview{
+  margin-top:12px;
+  border:1px solid rgba(0,25,110,.12);
+  border-radius:4px;
+  overflow:hidden;
+}
+
+.csvPreviewHead{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  padding:10px 12px;
+  background:rgba(0,25,110,.03);
+  font-weight:700;
+  color:rgba(0,25,110,.75);
+}
+
+.importBtn{
+  height:36px;
+  min-width:120px;
+  font-size:14px;
+}
+
+.csvTable{
+  display:flex;
+  flex-direction:column;
+  max-height:280px;
+  overflow:auto;
+}
+
+.csvTableHead,
+.csvTableRow{
+  display:grid;
+  grid-template-columns: 1.4fr 1.6fr;
+  gap:10px;
+  align-items:center;
+  padding:10px 12px;
+}
+
+.csvTableHead{
+  font-size:12px;
+  font-weight:800;
+  text-transform:uppercase;
+  letter-spacing:.06em;
+  color:rgba(0,25,110,.65);
+  border-top:1px solid rgba(0,25,110,.08);
+}
+
+.csvTableRow{
+  border-top:1px solid rgba(0,25,110,.06);
+  font-weight:700;
 }
 
 .formGrid{
@@ -310,6 +434,11 @@
 
   .courseTableRow > a{
     justify-self:start;
+  }
+
+  .csvTableHead,
+  .csvTableRow{
+    grid-template-columns:1fr;
   }
 
   .formGrid{
