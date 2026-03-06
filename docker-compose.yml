@@ -10,3 +10,15 @@ services:
     ports:
       - "3000:3000"
     restart: unless-stopped
+  nginx:
+    image: nginx:latest
+    container_name: fack-nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./certs:/etc/nginx/certs:ro
+    depends_on:
+      - fack-frontend
+    restart: unless-stopped
