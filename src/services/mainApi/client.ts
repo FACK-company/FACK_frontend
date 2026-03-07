@@ -4,7 +4,9 @@ import type {
   AddProfessorExamRequest,
   AddProfessorRecordingCommentRequest,
   AddProfessorCourseRequest,
-  AddProfessorCourseStudentRequest,
+  CsvBatchEnrollmentResponse,
+  CsvImportParams,
+  CsvPreviewResponse,
   ProfessorCourse,
   Student,
   ProfessorExamDetailsResponse,
@@ -841,47 +843,77 @@ export const mainApi = {
     });
   },
 
-  async addCourseStudent(
-    courseId: string,
-    payload: AddProfessorCourseStudentRequest
-  ): Promise<Student> {
-    // PLACEHOLDER ONLY: remove this mock branch when add-student backend is ready.
+  async previewCourseStudents(
+    file: File,
+    params: { hasHeader?: boolean; maxRows?: number }
+  ): Promise<CsvPreviewResponse> {
     if (MOCK_SERVER_TRUE) {
       return {
-        id: `st-${Date.now()}`,
-        firstName: payload.firstName,
-        lastName: payload.lastName,
-        email: payload.email,
+        columns: ["first_name", "last_name", "email"],
+        sampleRows: [],
+        totalRows: 0,
+        hasHeader: params.hasHeader ?? true,
       };
     }
 
-    return fetchServer<Student>({
+    const formData = new FormData();
+    formData.append("file", file);
+    if (params.hasHeader !== undefined) {
+      formData.append("hasHeader", String(params.hasHeader));
+    }
+    if (params.maxRows !== undefined) {
+      formData.append("maxRows", String(params.maxRows));
+    }
+
+    return fetchServer<CsvPreviewResponse>({
       baseUrl: mainApiBaseUrl,
-      path: `/prof/courses/${courseId}/students`,
+      path: "/enrollments/batch-csv/preview",
       method: "POST",
-      body: payload,
+      body: formData,
     });
   },
 
   async importCourseStudents(
-    courseId: string,
-    payload: AddProfessorCourseStudentRequest[]
-  ): Promise<Student[]> {
-    // PLACEHOLDER ONLY: remove this mock branch when import-students backend is ready.
+    file: File,
+    params: CsvImportParams
+  ): Promise<CsvBatchEnrollmentResponse> {
     if (MOCK_SERVER_TRUE) {
-      return payload.map((item, idx) => ({
-        id: `st-import-${Date.now()}-${idx}`,
-        firstName: item.firstName,
-        lastName: item.lastName,
-        email: item.email,
-      }));
+      return {
+        courseId: params.courseId,
+        totalRecords: 0,
+        successCount: 0,
+        skippedCount: 0,
+        errorCount: 0,
+        results: [],
+        timestamp: new Date().toISOString(),
+      };
     }
 
-    return fetchServer<Student[]>({
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("courseId", params.courseId);
+    formData.append("emailColumnIndex", String(params.emailColumnIndex));
+    if (params.nameColumnIndex !== undefined) {
+      formData.append("nameColumnIndex", String(params.nameColumnIndex));
+    }
+    if (params.hasHeaderRow !== undefined) {
+      formData.append("hasHeader", String(params.hasHeaderRow));
+    }
+    if (params.separateNameColumns !== undefined) {
+      formData.append("separateNameColumns", String(params.separateNameColumns));
+    }
+    if (params.firstNameColumnIndex !== undefined) {
+      formData.append("firstNameColumnIndex", String(params.firstNameColumnIndex));
+    }
+    if (params.lastNameColumnIndex !== undefined) {
+      formData.append("lastNameColumnIndex", String(params.lastNameColumnIndex));
+    }
+
+    return fetchServer<CsvBatchEnrollmentResponse>({
       baseUrl: mainApiBaseUrl,
-      path: `/prof/courses/${courseId}/students/import`,
+      path: "/enrollments/batch-csv/import",
       method: "POST",
-      body: { students: payload },
+      body: formData,
     });
   },
 
