@@ -74,6 +74,27 @@ npm run lint
 
 ## Docker
 
+### Using Docker Compose (Recommended)
+
+**Start the application:**
+```bash
+docker compose up --build
+```
+
+The service will be available at [http://localhost:3000](http://localhost:3000)
+
+**Stop the application:**
+```bash
+docker compose down
+```
+
+Environment variables can be configured in a `.env` file or passed via the compose command:
+```bash
+NEXT_PUBLIC_API_BASE_URL=http://10.212.8.136:8080/api docker compose up
+```
+
+### Using Docker Directly (Alternative)
+
 **Build:**
 ```bash
 docker build -t fack-frontend:latest .
