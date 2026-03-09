@@ -6,7 +6,7 @@ export default function AboutPage() {
       <header className="nav">
         <a className={`brand ${styles.brandWithLogo}`} href="/about">
           <img className={styles.brandLogo} src="/img/logo.png" alt="FACK logo" />
-          <span>Fulbright AntiCheat Knight</span>
+          <span>Fulbright AntiCheat Knights</span>
         </a>
         <nav className="nav-links" aria-hidden="true"></nav>
         <a className="btn-outline" href="/login">
