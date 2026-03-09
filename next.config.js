@@ -9,6 +9,22 @@ const nextConfig = {
     unoptimized: process.env.NODE_ENV === 'production',
   },
 
+  // Route Redirects
+  async redirects() {
+    return [
+      {
+        source: '/',
+        destination: '/login',
+        permanent: false,
+      },
+      {
+        source: '/about',
+        destination: '/login',
+        permanent: false,
+      },
+    ];
+  },
+
   // Security headers
   headers: async () => {
     return [
