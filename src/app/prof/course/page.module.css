@@ -73,7 +73,7 @@
 
 .addRow{
   display:grid;
-  grid-template-columns: repeat(6, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap:10px;
   margin-bottom:10px;
 }
@@ -82,9 +82,6 @@
   grid-column: span 2;
 }
 
-.addRow .textInput:nth-of-type(2){
-  grid-column: span 2;
-}
 
 
 .textInput{
@@ -213,6 +210,40 @@
   color:var(--navy);
 }
 
+.modalHeader{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  margin:0 0 12px;
+}
+
+.modalHeader .modalTitle{
+  margin:0;
+}
+
+.closeBtn{
+  height:36px;
+  width:36px;
+  border-radius:999px;
+  border:1px solid rgba(0,25,110,.25);
+  background:#fff;
+  color:var(--navy);
+  font-weight:800;
+  font-size:20px;
+  line-height:1;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  cursor:pointer;
+}
+
+.modalText{
+  margin:0 0 16px;
+  color:rgba(0,25,110,.8);
+  font-weight:600;
+}
+
 .modalSection{
   margin-bottom:14px;
 }
@@ -259,6 +290,20 @@
 .csvHint span{
   font-weight:800;
   color:rgba(0,25,110,.85);
+}
+
+.enrolledTag{
+  display:inline-flex;
+  align-items:center;
+  margin-left:8px;
+  padding:2px 8px;
+  border-radius:999px;
+  font-size:11px;
+  font-weight:800;
+  text-transform:uppercase;
+  letter-spacing:.04em;
+  background:rgba(255, 193, 7, 0.2);
+  color:#9a3412;
 }
 
 .csvPreview{

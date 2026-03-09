@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { getUserMetadata, mainApi } from "@/services";
 import ProfNav from "../ProfNav";
 import LoadingState from "@/components/LoadingState";
@@ -34,6 +34,22 @@ function normalizeHeaderCell(value: string): string {
   return value.trim().toLowerCase().replace(/\s+/g, "_");
 }
 
+function deriveNameFromEmail(email: string) {
+  const local = email.split("@")[0] ?? "";
+  const dotParts = local.split(".");
+  const trimmedParts =
+    dotParts.length > 1 && /^\d+$/.test(dotParts[dotParts.length - 1])
+      ? dotParts.slice(0, -1)
+      : dotParts;
+  const cleaned = trimmedParts.join(".").replace(/[._-]+/g, " ").trim();
+  if (!cleaned) return local;
+  return cleaned
+    .split(/\s+/)
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
+}
+
 export default function ProfCourseClient({
   courseId,
 }: ProfCourseClientProps) {
@@ -45,7 +61,6 @@ export default function ProfCourseClient({
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(true);
 
-  const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [isAddingStudent, setIsAddingStudent] = useState(false);
   const [isImportingCsv, setIsImportingCsv] = useState(false);
@@ -55,9 +70,10 @@ export default function ProfCourseClient({
   const [csvFile, setCsvFile] = useState<File | null>(null);
   const [csvPreview, setCsvPreview] = useState<CsvPreviewResponse | null>(null);
   const [csvPreviewRows, setCsvPreviewRows] = useState<string[][]>([]);
+  const [enrolledNotice, setEnrolledNotice] = useState<string | null>(null);
   const [csvMapping, setCsvMapping] = useState<{
     emailIndex: number;
-    nameIndex: number;
+    nameIndex: number | null;
   } | null>(null);
   const [openExamModal, setOpenExamModal] = useState(false);
   const [isCreatingExam, setIsCreatingExam] = useState(false);
@@ -69,6 +85,16 @@ export default function ProfCourseClient({
     startAvailableAt: "",
     endAvailableAt: "",
   });
+
+  const enrolledEmailSet = useMemo(
+    () =>
+      new Set(
+        students
+          .map((student) => student.email?.toLowerCase())
+          .filter((emailValue): emailValue is string => Boolean(emailValue))
+      ),
+    [students]
+  );
 
   useEffect(() => {
     const userMetadata = getUserMetadata();
@@ -115,16 +141,20 @@ export default function ProfCourseClient({
   const sortedStudents = students;
 
   const handleAddStudent = async () => {
-    const fullName = name.trim();
     const emailValue = email.trim().toLowerCase();
-    if (!fullName || !emailValue.includes("@")) {
-      setError("Please fill name and a valid email.");
+    if (!emailValue.includes("@")) {
+      setError("Please fill a valid email.");
+      return;
+    }
+    if (enrolledEmailSet.has(emailValue)) {
+      setEnrolledNotice(emailValue);
       return;
     }
 
     setIsAddingStudent(true);
     setError("");
     try {
+      const fullName = deriveNameFromEmail(emailValue);
       const csvText = `name,email\n${fullName},${emailValue}\n`;
       const file = new File([csvText], "single_student.csv", { type: "text/csv" });
       const result = await mainApi.importCourseStudents(file, {
@@ -141,7 +171,6 @@ export default function ProfCourseClient({
           `Imported ${result.successCount}, skipped ${result.skippedCount}, errors ${result.errorCount}.`
         );
       }
-      setName("");
       setEmail("");
     } catch {
       setError("Unable to add student.");
@@ -169,11 +198,11 @@ export default function ProfCourseClient({
       const nameIndex = normalized.indexOf("name");
       const emailIndex = normalized.indexOf("email");
 
-      if (nameIndex < 0 || emailIndex < 0) {
+      if (emailIndex < 0) {
         setCsvMapping(null);
         setCsvPreview(preview);
         setCsvPreviewRows([]);
-        setError("CSV header must include name, email.");
+        setError("CSV header must include email (name is optional).");
         return;
       }
 
@@ -181,12 +210,12 @@ export default function ProfCourseClient({
         if (row.length <= Math.max(nameIndex, emailIndex)) {
           return false;
         }
-        const nameValue = row[nameIndex]?.trim();
+        const nameValue = nameIndex >= 0 ? row[nameIndex]?.trim() : "";
         const emailValue = row[emailIndex]?.trim();
-        return Boolean(nameValue && emailValue && emailValue.includes("@"));
+        return Boolean(emailValue && emailValue.includes("@"));
       });
 
-      setCsvMapping({ nameIndex, emailIndex });
+      setCsvMapping({ nameIndex: nameIndex >= 0 ? nameIndex : null, emailIndex });
       setCsvPreview(preview);
       setCsvPreviewRows(validRows);
     } catch {
@@ -210,7 +239,7 @@ export default function ProfCourseClient({
         courseId: effectiveCourseId,
         hasHeaderRow: true,
         separateNameColumns: false,
-        nameColumnIndex: csvMapping.nameIndex,
+        ...(csvMapping.nameIndex !== null ? { nameColumnIndex: csvMapping.nameIndex } : {}),
         emailColumnIndex: csvMapping.emailIndex,
       });
       const refreshed = await mainApi.getCourseStudents(effectiveCourseId);
@@ -456,7 +485,24 @@ export default function ProfCourseClient({
       {openPeopleModal && (
         <div className="modal show">
           <div className={`modal-card ${styles.modalCard}`}>
-            <h3 className={styles.modalTitle}>Add people</h3>
+            <div className={styles.modalHeader}>
+              <h3 className={styles.modalTitle}>Add people</h3>
+              <button
+                className={styles.closeBtn}
+                type="button"
+                aria-label="Close add people"
+                onClick={() => {
+                  setOpenPeopleModal(false);
+                  setPeopleTab("single");
+                  setCsvFile(null);
+                  setCsvPreview(null);
+                  setCsvPreviewRows([]);
+                  setCsvMapping(null);
+                }}
+              >
+                ×
+              </button>
+            </div>
 
             <div className={styles.tabRow}>
               <button
@@ -479,12 +525,6 @@ export default function ProfCourseClient({
               <div className={styles.modalSection}>
                 <div className={styles.modalSubTitle}>Add one student</div>
                 <div className={styles.addRow}>
-                  <input
-                    className={styles.textInput}
-                    placeholder="Name"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                  />
                   <input
                     className={styles.textInput}
                     placeholder="Email"
@@ -519,7 +559,7 @@ export default function ProfCourseClient({
                   </label>
                 </div>
                 <div className={styles.csvHint}>
-                  Use columns: <span>name,email</span>
+                  Use columns: <span>email</span> (name optional)
                 </div>
 
                 {csvPreview && (
@@ -547,9 +587,16 @@ export default function ProfCourseClient({
                       </div>
                       {csvPreviewRows.map((row, idx) => (
                         <div className={styles.csvTableRow} key={`csv-row-${idx}`}>
-                          <div>{row[csvMapping?.nameIndex ?? 0]}</div>
+                          <div>
+                            {csvMapping?.nameIndex !== null && csvMapping?.nameIndex !== undefined
+                              ? row[csvMapping.nameIndex]
+                              : deriveNameFromEmail(row[csvMapping?.emailIndex ?? 0] || "")}
+                          </div>
                           <div className={styles.emailCell}>
                             {row[csvMapping?.emailIndex ?? 1]}
+                            {enrolledEmailSet.has(
+                              (row[csvMapping?.emailIndex ?? 1] || "").toLowerCase()
+                            ) && <span className={styles.enrolledTag}>Already enrolled</span>}
                           </div>
                         </div>
                       ))}
@@ -562,18 +609,22 @@ export default function ProfCourseClient({
               </div>
             )}
 
+          </div>
+        </div>
+      )}
+
+      {enrolledNotice && (
+        <div className="modal show">
+          <div className={`modal-card ${styles.modalCard}`}>
+            <h3 className={styles.modalTitle}>Student Already Enrolled</h3>
+            <p className={styles.modalText}>
+              The student <strong>{enrolledNotice}</strong> is already in this course.
+            </p>
             <div className={styles.modalActions}>
               <button
                 className={styles.ghostBtn}
                 type="button"
-                onClick={() => {
-                  setOpenPeopleModal(false);
-                  setPeopleTab("single");
-                  setCsvFile(null);
-                  setCsvPreview(null);
-                  setCsvPreviewRows([]);
-                  setCsvMapping(null);
-                }}
+                onClick={() => setEnrolledNotice(null)}
               >
                 Close
               </button>
