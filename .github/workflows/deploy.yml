@@ -17,7 +17,7 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
             # Navigate to the project directory
-            cd /var/www/fack-project/${{ github.event.repository.name }}
+            cd /var/www/fack-project/frontend
             
             # Pull latest changes from GitHub
             git pull origin main
