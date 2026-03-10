@@ -35,6 +35,9 @@ export interface ProfessorCourse {
   code: string;
   name: string;
   semester: string;
+  description?: string;
+  professorId?: string;
+  status?: string;
   studentCount?: number;
 }
 
@@ -43,6 +46,8 @@ export interface AddProfessorCourseRequest {
   name: string;
   professorId: string;
   semester: string;
+  description?: string;
+  status?: string;
 }
 
 export interface ProfessorExamRow {
