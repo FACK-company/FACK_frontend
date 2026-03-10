@@ -7,6 +7,7 @@ import type { AddProfessorCourseRequest, ProfessorCourse } from "@/types/api/mai
 import styles from "./page.module.css";
 
 const DEFAULT_PROF_USERNAME = "prof_username";
+const SEMESTER_OPTIONS = ["Fall 2025", "Spring 2026", "Fall 2026"] as const;
 
 export default function ProfHome() {
   const [username, setUsername] = useState(DEFAULT_PROF_USERNAME);
@@ -20,6 +21,8 @@ export default function ProfHome() {
     name: "",
     semester: "Spring 2026",
     professorId: "",
+    description: "",
+    status: "active",
   });
 
   useEffect(() => {
@@ -83,6 +86,8 @@ export default function ProfHome() {
         name: "",
         semester: "Spring 2026",
         professorId: profId,
+        description: "",
+        status: "active",
       });
     } catch(error) {
       console.error("Error creating course ", error);
@@ -100,12 +105,12 @@ export default function ProfHome() {
         <section className="frame">
           <div className={styles.frameHead}>
             <div className="page-title">Courses</div>
-            {/* <button className={styles.createTrigger} type="button" onClick={() => setOpen(true)}>
+            <button className={styles.createTrigger} type="button" onClick={() => setOpen(true)}>
               <span className={styles.addBtn} aria-hidden="true">
                 +
               </span>
               <span>Create new course</span>
-            </button> */}
+            </button>
           </div>
 
           <div className="cards">
@@ -151,12 +156,25 @@ export default function ProfHome() {
                 />
               </label>
               <label className={styles.field}>
-                <span>semester</span>
-                <input
-                  type="text"
+                <span>Semester</span>
+                <select
                   value={form.semester}
                   onChange={(e) => setForm((p) => ({ ...p, semester: e.target.value }))}
-                  placeholder="Spring 2026"
+                >
+                  {SEMESTER_OPTIONS.map((semester) => (
+                    <option key={semester} value={semester}>
+                      {semester}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className={styles.field}>
+                <span>Description</span>
+                <input
+                  type="text"
+                  value={form.description || ""}
+                  onChange={(e) => setForm((p) => ({ ...p, description: e.target.value }))}
+                  placeholder="Course description"
                 />
               </label>
             </div>

@@ -333,8 +333,7 @@ function StudentRecordPageContent() {
       setRemainingSec(gateNow.remainingSeconds > 0 ? gateNow.remainingSeconds : totalDurationSec);
       setShowWarning(false);
       if (gateNow.message) {
-        setError(gateNow.message);
-        console.log("Start gate evaluation failed:", gateNow.message);
+        console.log("Start gate note:", gateNow.message);
       } else {
         setError("");
       }
@@ -455,7 +454,7 @@ function StudentRecordPageContent() {
         )}
         {!loading && error && <div className={styles.error}>{error}</div>}
 
-        {!loading && !error && exam && (
+        {!loading && exam && (
           <>
             <section className="panel left">
               <h2 className={styles.sectionTitle}>Exam metadata</h2>
