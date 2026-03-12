@@ -963,22 +963,31 @@ export const mainApi = {
       };
     }
 
-    const formData = new FormData();
-    formData.append("title", payload.title);
-    formData.append("description", payload.description);
-    formData.append("durationMinutes", String(payload.durationMinutes));
-    formData.append("startAvailableAt", payload.startAvailableAt);
-    formData.append("endAvailableAt", payload.endAvailableAt);
-    if (payload.examFile) {
-      formData.append("examFileUrl", payload.examFile);
-    }
-
-    return fetchServer<ProfessorExamRow>({
+    const metadata = getUserMetadata();
+    const created = await fetchServer<BackendExamResponse>({
       baseUrl: mainApiBaseUrl,
-      path: `/prof/courses/${courseId}/exams`,
+      path: "/exams",
       method: "POST",
-      body: formData,
+      body: {
+        courseId,
+        title: payload.title,
+        description: payload.description,
+        professorId: metadata?.id || "",
+        examFileUrl: "",
+        durationMinutes: payload.durationMinutes,
+        startAvailableAt: payload.startAvailableAt,
+        endAvailableAt: payload.endAvailableAt,
+        recordingRequired: true,
+      },
     });
+
+    return {
+      id: created.id,
+      title: created.title,
+      description: created.description,
+      courseCode: created.courseId?.toUpperCase?.() || courseId.toUpperCase(),
+      studentCount: 0,
+    };
   },
 
   async updateCourseExam(
