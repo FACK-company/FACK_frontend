@@ -10,7 +10,7 @@ function delay(ms: number) {
 
 // Same as apiFinalize() in the uploaded recording page.tsx
 async function apiFinalize(apiBase: string, sessionId: string): Promise<FinalizeResult> {
-    const res = await fetch(`${apiBase}/recordings/finalize`, {
+    const res = await fetch(`${apiBase}/recordings/finalize?preview=true`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ sessionId }),
