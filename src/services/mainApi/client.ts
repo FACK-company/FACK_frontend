@@ -26,6 +26,8 @@ import type {
   StudentExamDetailResponse,
   StudentExamSummary,
   StudentProfileResponse,
+  StudentExamSession,
+  ActiveExamSessionResult,
   ExamSession,
 } from "@/types/api/main";
 import {
@@ -547,6 +549,21 @@ export const mainApi = {
     return response;
   },
 
+  async checkAuthSession(): Promise<boolean> {
+    try {
+      await fetchServer<BackendMeResponse>({
+        baseUrl: mainApiBaseUrl,
+        path: "/auth/me",
+        method: "GET",
+        retryOnAuthFailure: false,
+        suppressAuthRedirect: true,
+      });
+      return true;
+    } catch {
+      return false;
+    }
+  },
+
   async refreshAccessToken(): Promise<LoginResponse | null> {
     const token = await refreshAccessToken(mainApiBaseUrl, Number(process.env.NEXT_PUBLIC_API_TIMEOUT ?? 30000));
     if (!token) return null;
@@ -704,6 +721,38 @@ export const mainApi = {
     }
   },
 
+  async getActiveExamSession(
+    deviceInfo?: string,
+    accessTokenOverride?: string,
+    verifyDevice?: boolean
+  ): Promise<ActiveExamSessionResult> {
+    const headers: HeadersInit = {};
+    if (deviceInfo) {
+      headers["X-Device-Info"] = deviceInfo;
+    }
+    if (accessTokenOverride) {
+      headers["Authorization"] = `Bearer ${accessTokenOverride}`;
+    }
+    const query = verifyDevice ? "?verifyDevice=true" : "";
+    try {
+      const session = await fetchServer<StudentExamSession | null>({
+        baseUrl: mainApiBaseUrl,
+        path: `/exam-sessions/active${query}`,
+        method: "GET",
+        headers,
+        retryOnAuthFailure: false,
+        suppressAuthRedirect: true,
+      });
+      return { session: session ?? null };
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "";
+      if (message.includes("HTTP 409")) {
+        return { session: null, conflict: true };
+      }
+      return { session: null };
+    }
+  },
+
   async uploadRecordingChunk(payload: UploadRecordingChunkPayload): Promise<void> {
     const formData = new FormData();
     formData.append("sessionId", payload.sessionId);
@@ -784,6 +833,14 @@ export const mainApi = {
       startAvailableAt: exam.startAvailableAt,
       endAvailableAt: exam.endAvailableAt,
     };
+  },
+
+  async getExamById(examId: string): Promise<BackendExamResponse> {
+    return fetchServer<BackendExamResponse>({
+      baseUrl: mainApiBaseUrl,
+      path: `/exams/${examId}`,
+      method: "GET",
+    });
   },
 
   async getProfessorCourses(prof_id: string): Promise<ProfessorCourse[]> {

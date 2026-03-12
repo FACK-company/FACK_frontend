@@ -197,6 +197,25 @@ export interface ExamSessionStudent {
   status: string;
 }
 
+export interface StudentExamSession {
+  id: string;
+  examId: string;
+  studentId: string;
+  startTime: string;
+  endTime: string | null;
+  status: string;
+  screenRecordingPath: string | null;
+  ipAddress: string | null;
+  deviceInfo: string | null;
+  browserInfo: string | null;
+  createdAt: string;
+}
+
+export interface ActiveExamSessionResult {
+  session: StudentExamSession | null;
+  conflict?: boolean;
+}
+
 export interface ExamSession {
   id: string;
   examId: string;

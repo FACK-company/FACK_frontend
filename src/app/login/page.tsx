@@ -65,6 +65,31 @@ export default function LoginPage() {
       setUserMetadata({ id: userId, name: userName, role: userRole });
       // console.log("User metadata stored:", { id: userId, name: userName, role: userRole });
 
+      if (userRole === "student") {
+        const deviceInfo = typeof navigator !== "undefined" ? navigator.userAgent : "unknown";
+        const activeResult = await mainApi.getActiveExamSession(deviceInfo, response.accessToken);
+        if (activeResult.conflict) {
+          setFormError("Resume blocked: active session was terminated due to device mismatch.");
+        }
+        const activeSession = activeResult.session;
+        if (activeSession && activeSession.status === "running") {
+          try {
+            const exam = await mainApi.getExamById(activeSession.examId);
+            const courseId = exam.courseId || "";
+            if (courseId) {
+              const params = new URLSearchParams();
+              params.set("courseId", courseId);
+              params.set("examId", activeSession.examId);
+              params.set("resumeSessionId", activeSession.id);
+              router.push(`/student/record?${params.toString()}`);
+              return;
+            }
+          } catch {
+            // Fall through to default route if exam lookup fails.
+          }
+        }
+      }
+
       const target =
         userRole === "student"
           ? "/student/home"

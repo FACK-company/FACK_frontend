@@ -9,6 +9,7 @@ export interface ApiFetchOptions {
 	body?: unknown;
 	timeoutMs?: number;
 	retryOnAuthFailure?: boolean;
+	suppressAuthRedirect?: boolean;
 }
 
 const DEFAULT_TIMEOUT_MS = Number(process.env.NEXT_PUBLIC_API_TIMEOUT ?? 30000);
@@ -36,6 +37,14 @@ function isRecordingPostPath(path: string, method: string): boolean {
 		m === "POST" &&
 		(path === "/recordings/chunk" || path === "/recordings/finalize")
 	);
+}
+
+function handleUnauthorizedRedirect(): void {
+	clearAccessToken();
+	clearUserMetadata();
+	if (typeof window !== "undefined") {
+		window.location.assign("/login");
+	}
 }
 
 async function refreshAccessToken(baseUrl: string, timeoutMs: number): Promise<string | null> {
@@ -93,6 +102,7 @@ export async function fetchServer<T>({
 	body,
 	timeoutMs,
 	retryOnAuthFailure = true,
+	suppressAuthRedirect = false,
 }: ApiFetchOptions): Promise<T> {
 	const controller = new AbortController();
 	const timeout = timeoutMs ?? DEFAULT_TIMEOUT_MS;
@@ -157,23 +167,20 @@ export async function fetchServer<T>({
 						body,
 						timeoutMs: timeout,
 						retryOnAuthFailure: false,
+						suppressAuthRedirect,
 					});
 				}
-				if (!isRecordingPostPath(path, method)) {
-					clearAccessToken();
-					clearUserMetadata();
-					throw new Error("HTTP 401");
+				if (!suppressAuthRedirect && !isRecordingPostPath(path, method)) {
+					handleUnauthorizedRedirect();
 				}
-				throw new Error(`HTTP ${response.status}`);
+				throw new Error("HTTP 401");
 			}
 
 			if (AUTH_FAILURE_STATUSES.has(response.status) && !isAuthPath(path)) {
-				if (!isRecordingPostPath(path, method)) {
-					clearAccessToken();
-					clearUserMetadata();
-					throw new Error("HTTP 401");
+				if (!suppressAuthRedirect && !isRecordingPostPath(path, method)) {
+					handleUnauthorizedRedirect();
 				}
-				throw new Error(`HTTP ${response.status}`);
+				throw new Error("HTTP 401");
 			}
 			throw new Error(`HTTP ${response.status}`);
 		}

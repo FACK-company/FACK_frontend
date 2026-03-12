@@ -2,10 +2,10 @@
 
 import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
-import { getUserMetadata, mainApi } from "@/services";
+import { clearAccessToken, clearUserMetadata, getUserMetadata, mainApi } from "@/services";
 import StudentNav from "../StudentNav";
 import LoadingState from "@/components/LoadingState";
-import type { StudentExamDetailResponse } from "@/types/api/main";
+import type { StudentExamDetailResponse, StudentExamSession } from "@/types/api/main";
 import styles from "./page.module.css";
 
 const DEFAULT_USERNAME = "student_name";
@@ -48,6 +48,21 @@ function deriveDurationSeconds(exam: StudentExamDetailResponse | null): number {
   const endTotal = endHour * 60 + endMin;
   const diffMinutes = Math.max(0, endTotal - startTotal);
   return diffMinutes * 60;
+}
+
+function deriveRemainingFromSession(
+  exam: StudentExamDetailResponse | null,
+  session: StudentExamSession | null
+): number {
+  if (!exam) return 0;
+  if (session?.startTime && exam.durationMinutes && exam.durationMinutes > 0) {
+    const startMs = new Date(session.startTime).getTime();
+    if (!Number.isNaN(startMs)) {
+      const endMs = startMs + exam.durationMinutes * 60 * 1000;
+      return Math.max(0, Math.floor((endMs - Date.now()) / 1000));
+    }
+  }
+  return deriveDurationSeconds(exam);
 }
 
 function getRecordingMimeType(): string {
@@ -125,6 +140,7 @@ function StudentRecordPageContent() {
   const router = useRouter();
   const courseId = searchParams.get("courseId") || "cs207";
   const examId = searchParams.get("examId") || "final-exam";
+  const resumeSessionId = searchParams.get("resumeSessionId");
 
   const [username, setUsername] = useState(DEFAULT_USERNAME);
   const [exam, setExam] = useState<StudentExamDetailResponse | null>(null);
@@ -139,6 +155,9 @@ function StudentRecordPageContent() {
   const [isFinalizing, setIsFinalizing] = useState(false);
   const [recordingSessionId, setRecordingSessionId] = useState<string | null>(null);
   const [nowMs, setNowMs] = useState(Date.now());
+  const [resumeSession, setResumeSession] = useState<StudentExamSession | null>(null);
+  const [resumeError, setResumeError] = useState("");
+  const [sessionReplaced, setSessionReplaced] = useState(false);
 
   const mediaStreamRef = useRef<MediaStream | null>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -180,12 +199,61 @@ function StudentRecordPageContent() {
   }, [courseId, examId]);
 
   useEffect(() => {
+    if (!resumeSessionId) return;
+    let isMounted = true;
+    const deviceInfo = typeof navigator !== "undefined" ? navigator.userAgent : "unknown";
+    mainApi
+      .getActiveExamSession(deviceInfo, undefined, false)
+      .then((result) => {
+        if (!isMounted) return;
+        if (result.conflict) {
+          setResumeSession(null);
+          setResumeError("Resume blocked: active session terminated due to device mismatch.");
+          return;
+        }
+        if (result.session && result.session.id === resumeSessionId) {
+          setResumeSession(result.session);
+          setResumeError("");
+        } else {
+          setResumeSession(null);
+          setResumeError("Unable to resume this exam session.");
+        }
+      })
+      .catch(() => {
+        if (!isMounted) return;
+        setResumeSession(null);
+        setResumeError("Unable to resume this exam session.");
+      });
+    return () => {
+      isMounted = false;
+    };
+  }, [resumeSessionId]);
+
+  useEffect(() => {
     if (!isRecording) return;
     const timer = setInterval(() => {
       setRemainingSec((prev) => Math.max(0, prev - 1));
     }, 1000);
     return () => clearInterval(timer);
   }, [isRecording]);
+
+  useEffect(() => {
+    if (!isRecording) return;
+    let stopped = false;
+    const check = async () => {
+      if (stopped || sessionReplaced) return;
+      const ok = await mainApi.checkAuthSession();
+      if (!ok) {
+        setSessionReplaced(true);
+      }
+    };
+    check();
+    const id = setInterval(check, 5000);
+    return () => {
+      stopped = true;
+      clearInterval(id);
+    };
+  }, [isRecording, sessionReplaced]);
 
   // Auto-submit when timer reaches 0
   useEffect(() => {
@@ -279,12 +347,16 @@ function StudentRecordPageContent() {
       });
     });
 
-    uploadQueueRef.current = uploadQueueRef.current.catch(() => {
+    uploadQueueRef.current = uploadQueueRef.current.catch((err) => {
+      const message = err instanceof Error ? err.message : "";
       setError("Chunk upload failed. Please check network and retry.");
+      if (message.includes("HTTP 401") || message.includes("HTTP 403") || message.includes("HTTP 409")) {
+        setSessionReplaced(true);
+      }
     });
   };
 
-  const startRecording = async () => {
+  const startRecording = async (overrideSessionId?: string, skipGate?: boolean) => {
     const metadata = getUserMetadata();
     console.log("Starting recording with user metadata:", metadata);
     if (!metadata?.id) {
@@ -293,7 +365,7 @@ function StudentRecordPageContent() {
       return;
     }
     console.log("Evaluating start gate with exam data:", exam);
-    const gateNow = evaluateStartGate(exam, Date.now());
+    const gateNow = skipGate ? { canStart: true, remainingSeconds: totalDurationSec, message: "" } : evaluateStartGate(exam, Date.now());
     if (!gateNow.canStart) {
       console.log("Start gate evaluation failed:", gateNow.message);
       setError(gateNow.message || "Exam cannot be started right now.");
@@ -320,7 +392,7 @@ function StudentRecordPageContent() {
         return;
       }
       console.log("Screen recording permission granted. Starting recorder...");
-      const sessionId = generateSessionId();
+      const sessionId = overrideSessionId || generateSessionId();
       const mimeType = getRecordingMimeType();
       const recorder = new MediaRecorder(stream, { mimeType });
 
@@ -330,7 +402,11 @@ function StudentRecordPageContent() {
       uploadQueueRef.current = Promise.resolve();
       setRecordingSessionId(sessionId);
       sessionIdRef.current = sessionId;
-      setRemainingSec(gateNow.remainingSeconds > 0 ? gateNow.remainingSeconds : totalDurationSec);
+      const resumeRemaining = deriveRemainingFromSession(exam, resumeSession);
+      const nextRemaining = skipGate
+        ? resumeRemaining
+        : (gateNow.remainingSeconds > 0 ? gateNow.remainingSeconds : totalDurationSec);
+      setRemainingSec(nextRemaining);
       setShowWarning(false);
       if (gateNow.message) {
         console.log("Start gate note:", gateNow.message);
@@ -361,13 +437,13 @@ function StudentRecordPageContent() {
     }
   };
 
-  const stopRecorderAndFinalize = async () => {
+  const stopRecorderAndFinalize = async (redirectToComplete: boolean = true): Promise<boolean> => {
     const metadata = getUserMetadata();
     const currentSessionId = sessionIdRef.current;
     if (!metadata?.id || !currentSessionId) {
       console.log("Missing metadata or recording session ID", { metadata, currentSessionId });
       setError("Missing recording session information.");
-      return;
+      return false;
     }
 
     setIsFinalizing(true);
@@ -400,20 +476,36 @@ function StudentRecordPageContent() {
       sessionIdRef.current = null;
       setRemainingSec(0);
 
-      const params = new URLSearchParams();
-      params.set("courseId", courseId);
-      if (exam?.courseCode) params.set("courseCode", exam.courseCode);
-      if (exam?.title) params.set("examTitle", exam.title);
-      router.replace(`/student/record/complete?${params.toString()}`);
+      if (redirectToComplete) {
+        const params = new URLSearchParams();
+        params.set("courseId", courseId);
+        if (exam?.courseCode) params.set("courseCode", exam.courseCode);
+        if (exam?.title) params.set("examTitle", exam.title);
+        router.replace(`/student/record/complete?${params.toString()}`);
+      }
+      return true;
     } catch {
       setError("Unable to finalize recording. Please retry ending the exam.");
+      return false;
     } finally {
       setIsFinalizing(false);
     }
   };
 
   // Keep the ref in sync with the latest stopRecorderAndFinalize
-  stopRecorderAndFinalizeRef.current = stopRecorderAndFinalize;
+  stopRecorderAndFinalizeRef.current = () => stopRecorderAndFinalize(true).then(() => {});
+
+  const finalizeAndLogout = async () => {
+    const ok = await stopRecorderAndFinalize(false);
+    if (!ok) return;
+    try {
+      await mainApi.logout();
+    } finally {
+      clearAccessToken();
+      clearUserMetadata();
+      router.replace("/login");
+    }
+  };
 
   return (
     <div className="page bg-record">
@@ -489,14 +581,54 @@ function StudentRecordPageContent() {
             <section className="panel right">
               {!isRecording && (
                 <div className="actions">
-                  <button
-                    className="primary-btn"
-                    type="button"
-                    disabled={isPermissionPending || !startGate.canStart}
-                    onClick={startRecording}
-                  >
-                    {isPermissionPending ? "Waiting for permission..." : "Start Recording & Exam"}
-                  </button>
+                  {resumeSessionId && (
+                    <div className={styles.resumeNotice}>
+                      <div className={styles.resumeTitle}>Resume existing exam recording?</div>
+                      <div className={styles.resumeBody}>
+                        We detected an in-progress session for this exam. Resume to continue recording.
+                      </div>
+                      {resumeError && <div className={styles.resumeError}>{resumeError}</div>}
+                      <div className={styles.resumeActions}>
+                        <button
+                          className="primary-btn"
+                          type="button"
+                          disabled={isPermissionPending || !resumeSession}
+                          onClick={async () => {
+                            const deviceInfo = typeof navigator !== "undefined" ? navigator.userAgent : "unknown";
+                            const verify = await mainApi.getActiveExamSession(deviceInfo, undefined, true);
+                            if (verify.conflict || !verify.session || verify.session.id !== resumeSessionId) {
+                              setResumeSession(null);
+                              setResumeError("Resume blocked: device mismatch or session expired.");
+                              return;
+                            }
+                            startRecording(resumeSessionId ?? undefined, true);
+                          }}
+                        >
+                          {isPermissionPending ? "Waiting for permission..." : "Resume Recording"}
+                        </button>
+                        <button
+                          className={styles.secondaryBtn}
+                          type="button"
+                          disabled={isPermissionPending || !startGate.canStart}
+                          onClick={() => void startRecording()}
+                        >
+                          Start New Recording
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                  {!resumeSessionId && (
+                    <button
+                      className="primary-btn"
+                      type="button"
+                      disabled={isPermissionPending || !startGate.canStart}
+                      onClick={() => void startRecording()}
+                    >
+                      {isPermissionPending
+                        ? "Waiting for permission..."
+                        : "Start Recording & Exam"}
+                    </button>
+                  )}
                   <div className={`warning ${styles.warningCentered}`}>
                     {startGate.canStart
                       ? "Screen recording permission is required to start the exam."
@@ -528,6 +660,23 @@ function StudentRecordPageContent() {
         </div>
       )}
 
+      {sessionReplaced && !isFinalizing && (
+        <div className="modal show">
+          <div className="modal-card" role="dialog" aria-modal="true">
+            <h3>Signed in on another device</h3>
+            <p>
+              Your account was used to sign in on another device. Please finalize your current recording,
+              then you will be logged out on this device.
+            </p>
+            <div className="modal-actions">
+              <button className={styles.modalDangerBtn} type="button" onClick={finalizeAndLogout}>
+                Stop &amp; Finalize, then Logout
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {showStopModal && !isFinalizing && (
         <div className="modal show">
           <div className="modal-card" role="dialog" aria-modal="true">
@@ -537,7 +686,11 @@ function StudentRecordPageContent() {
               <button className={styles.modalSecondaryBtn} type="button" onClick={() => setShowStopModal(false)}>
                 Cancel
               </button>
-              <button className={styles.modalDangerBtn} type="button" onClick={stopRecorderAndFinalize}>
+              <button
+                className={styles.modalDangerBtn}
+                type="button"
+                onClick={() => void stopRecorderAndFinalize(true)}
+              >
                 End Exam
               </button>
             </div>
