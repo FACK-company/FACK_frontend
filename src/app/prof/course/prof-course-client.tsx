@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { getUserMetadata, mainApi } from "@/services";
 import ProfNav from "../ProfNav";
 import LoadingState from "@/components/LoadingState";
 import type {
+  AddProfessorCourseRequest,
   AddProfessorExamRequest,
   Student,
   ProfessorExamRow,
@@ -14,6 +15,7 @@ import type {
 import styles from "./page.module.css";
 
 const DEFAULT_PROF_USERNAME = "prof_username";
+const SEMESTER_OPTIONS = ["Fall 2025", "Spring 2026", "Fall 2026"] as const;
 
 type ProfCourseClientProps = {
   courseId: string;
@@ -34,6 +36,22 @@ function normalizeHeaderCell(value: string): string {
   return value.trim().toLowerCase().replace(/\s+/g, "_");
 }
 
+function deriveNameFromEmail(email: string) {
+  const local = email.split("@")[0] ?? "";
+  const dotParts = local.split(".");
+  const trimmedParts =
+    dotParts.length > 1 && /^\d+$/.test(dotParts[dotParts.length - 1])
+      ? dotParts.slice(0, -1)
+      : dotParts;
+  const cleaned = trimmedParts.join(".").replace(/[._-]+/g, " ").trim();
+  if (!cleaned) return local;
+  return cleaned
+    .split(/\s+/)
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
+}
+
 export default function ProfCourseClient({
   courseId,
 }: ProfCourseClientProps) {
@@ -45,7 +63,6 @@ export default function ProfCourseClient({
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(true);
 
-  const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [isAddingStudent, setIsAddingStudent] = useState(false);
   const [isImportingCsv, setIsImportingCsv] = useState(false);
@@ -55,12 +72,23 @@ export default function ProfCourseClient({
   const [csvFile, setCsvFile] = useState<File | null>(null);
   const [csvPreview, setCsvPreview] = useState<CsvPreviewResponse | null>(null);
   const [csvPreviewRows, setCsvPreviewRows] = useState<string[][]>([]);
+  const [enrolledNotice, setEnrolledNotice] = useState<string | null>(null);
   const [csvMapping, setCsvMapping] = useState<{
     emailIndex: number;
-    nameIndex: number;
+    nameIndex: number | null;
   } | null>(null);
   const [openExamModal, setOpenExamModal] = useState(false);
   const [isCreatingExam, setIsCreatingExam] = useState(false);
+  const [openCourseMetaModal, setOpenCourseMetaModal] = useState(false);
+  const [isSavingCourseMeta, setIsSavingCourseMeta] = useState(false);
+  const [courseForm, setCourseForm] = useState<AddProfessorCourseRequest>({
+    code: "",
+    name: "",
+    semester: "",
+    professorId: "",
+    description: "",
+    status: "active",
+  });
   const [examForm, setExamForm] = useState<AddProfessorExamRequest>({
     title: "",
     description: "",
@@ -69,6 +97,16 @@ export default function ProfCourseClient({
     startAvailableAt: "",
     endAvailableAt: "",
   });
+
+  const enrolledEmailSet = useMemo(
+    () =>
+      new Set(
+        students
+          .map((student) => student.email?.toLowerCase())
+          .filter((emailValue): emailValue is string => Boolean(emailValue))
+      ),
+    [students]
+  );
 
   useEffect(() => {
     const userMetadata = getUserMetadata();
@@ -92,6 +130,14 @@ export default function ProfCourseClient({
 
         setCourseData(courseResp);
         setCourseTitle(courseResp?.name || "Course");
+        setCourseForm({
+          code: courseResp?.code || "",
+          name: courseResp?.name || "",
+          semester: courseResp?.semester || "",
+          professorId: getUserMetadata()?.id || courseResp?.professorId || "",
+          description: courseResp?.description || "",
+          status: courseResp?.status || "active",
+        });
         setExams(examsResp || []);
         setStudents(normalizeStudents(studentsResp || []));
       } catch (loadError) {
@@ -115,16 +161,20 @@ export default function ProfCourseClient({
   const sortedStudents = students;
 
   const handleAddStudent = async () => {
-    const fullName = name.trim();
     const emailValue = email.trim().toLowerCase();
-    if (!fullName || !emailValue.includes("@")) {
-      setError("Please fill name and a valid email.");
+    if (!emailValue.includes("@")) {
+      setError("Please fill a valid email.");
+      return;
+    }
+    if (enrolledEmailSet.has(emailValue)) {
+      setEnrolledNotice(emailValue);
       return;
     }
 
     setIsAddingStudent(true);
     setError("");
     try {
+      const fullName = deriveNameFromEmail(emailValue);
       const csvText = `name,email\n${fullName},${emailValue}\n`;
       const file = new File([csvText], "single_student.csv", { type: "text/csv" });
       const result = await mainApi.importCourseStudents(file, {
@@ -141,7 +191,6 @@ export default function ProfCourseClient({
           `Imported ${result.successCount}, skipped ${result.skippedCount}, errors ${result.errorCount}.`
         );
       }
-      setName("");
       setEmail("");
     } catch {
       setError("Unable to add student.");
@@ -169,11 +218,11 @@ export default function ProfCourseClient({
       const nameIndex = normalized.indexOf("name");
       const emailIndex = normalized.indexOf("email");
 
-      if (nameIndex < 0 || emailIndex < 0) {
+      if (emailIndex < 0) {
         setCsvMapping(null);
         setCsvPreview(preview);
         setCsvPreviewRows([]);
-        setError("CSV header must include name, email.");
+        setError("CSV header must include email (name is optional).");
         return;
       }
 
@@ -181,12 +230,12 @@ export default function ProfCourseClient({
         if (row.length <= Math.max(nameIndex, emailIndex)) {
           return false;
         }
-        const nameValue = row[nameIndex]?.trim();
+        const nameValue = nameIndex >= 0 ? row[nameIndex]?.trim() : "";
         const emailValue = row[emailIndex]?.trim();
-        return Boolean(nameValue && emailValue && emailValue.includes("@"));
+        return Boolean(emailValue && emailValue.includes("@"));
       });
 
-      setCsvMapping({ nameIndex, emailIndex });
+      setCsvMapping({ nameIndex: nameIndex >= 0 ? nameIndex : null, emailIndex });
       setCsvPreview(preview);
       setCsvPreviewRows(validRows);
     } catch {
@@ -210,7 +259,7 @@ export default function ProfCourseClient({
         courseId: effectiveCourseId,
         hasHeaderRow: true,
         separateNameColumns: false,
-        nameColumnIndex: csvMapping.nameIndex,
+        ...(csvMapping.nameIndex !== null ? { nameColumnIndex: csvMapping.nameIndex } : {}),
         emailColumnIndex: csvMapping.emailIndex,
       });
       const refreshed = await mainApi.getCourseStudents(effectiveCourseId);
@@ -245,12 +294,22 @@ export default function ProfCourseClient({
       setError("Please fill exam title.");
       return;
     }
-    if (!payload.examFile) {
-      setError("Please upload the exam PDF.");
-      return;
-    }
     if (Number.isNaN(payload.durationMinutes) || payload.durationMinutes <= 0) {
       setError("Duration must be greater than 0.");
+      return;
+    }
+    if (!payload.startAvailableAt || !payload.endAvailableAt) {
+      setError("Start and end time are required.");
+      return;
+    }
+    const startMs = new Date(payload.startAvailableAt).getTime();
+    const endMs = new Date(payload.endAvailableAt).getTime();
+    if (Number.isNaN(startMs) || Number.isNaN(endMs)) {
+      setError("Start/end time format is invalid.");
+      return;
+    }
+    if (startMs >= endMs) {
+      setError("End time must be after start time.");
       return;
     }
 
@@ -275,13 +334,72 @@ export default function ProfCourseClient({
     }
   };
 
+  const handleDeleteExam = async (examId: string) => {
+    if (!window.confirm("Delete this exam? This action cannot be undone.")) {
+      return;
+    }
+    setError("");
+    try {
+      await mainApi.deleteExam(examId);
+      setExams((prev) => prev.filter((item) => item.id !== examId));
+    } catch {
+      setError("Unable to delete exam.");
+    }
+  };
+
+  const handleRemoveStudent = async (student: Student) => {
+    if (!student.id) {
+      setError("Cannot remove student: missing student id.");
+      return;
+    }
+    if (!window.confirm(`Remove ${student.name || student.email} from this course?`)) {
+      return;
+    }
+    setError("");
+    try {
+      await mainApi.removeStudentFromCourse(effectiveCourseId, student.id);
+      setStudents((prev) => prev.filter((item) => item.id !== student.id));
+    } catch {
+      setError("Unable to remove student from course.");
+    }
+  };
+
+  const handleSaveCourseMeta = async () => {
+    const payload: AddProfessorCourseRequest = {
+      code: courseForm.code.trim(),
+      name: courseForm.name.trim(),
+      semester: courseForm.semester.trim(),
+      professorId: courseForm.professorId || getUserMetadata()?.id || "",
+      description: courseForm.description?.trim() || "",
+      status: courseForm.status || "active",
+    };
+
+    if (!payload.code || !payload.name || !payload.semester) {
+      setError("Course code, name, and semester are required.");
+      return;
+    }
+
+    setIsSavingCourseMeta(true);
+    setError("");
+    try {
+      const updated = await mainApi.updateCourse(effectiveCourseId, payload);
+      setCourseData(updated);
+      setCourseTitle(updated.name || payload.name);
+      setOpenCourseMetaModal(false);
+    } catch {
+      setError("Unable to update course metadata.");
+    } finally {
+      setIsSavingCourseMeta(false);
+    }
+  };
+
   return (
     <div className={`page ${styles.pageBg}`}>
       <ProfNav username={username} />
 
       <main className="main">
         <section className="frame">
-          <div className="page-title">Course — {courseTitle}</div>
+          <div className="page-title">Course - {courseTitle}</div>
           {error && <div className={styles.errorText}>{error}</div>}
           {isLoading && (
             <div className={styles.empty}>
@@ -290,38 +408,74 @@ export default function ProfCourseClient({
           )}
 
           <div className={styles.layout}>
-            <section className={styles.examPanel}>
+                        <section className={styles.examPanel}>
+              <div className={styles.metaCard}>
+                <div className={styles.metaGrid}>
+                  <div>
+                    <div className={styles.metaLabel}>Code</div>
+                    <div className={styles.metaValue}>{courseData?.code || "-"}</div>
+                  </div>
+                  <div>
+                    <div className={styles.metaLabel}>Semester</div>
+                    <div className={styles.metaValue}>{courseData?.semester || "-"}</div>
+                  </div>
+                  <div>
+                    <div className={styles.metaLabel}>Status</div>
+                    <div className={styles.metaValue}>{courseData?.status || "active"}</div>
+                  </div>
+                  <div className={styles.metaWide}>
+                    <div className={styles.metaLabel}>Description</div>
+                    <div className={styles.metaValue}>{courseData?.description || "-"}</div>
+                  </div>
+                </div>
+                <button
+                  className={styles.createExamBtn}
+                  type="button"
+                  onClick={() => setOpenCourseMetaModal(true)}
+                >
+                  Edit course data
+                </button>
+              </div>
+
               <div className={styles.examHead}>
                 <div className={styles.sectionTitle}>Exams</div>
-                {/* <button
+                <button
                   className={styles.createExamBtn}
                   type="button"
                   onClick={() => setOpenExamModal(true)}
                 >
                   + Create exam
-                </button> */}
+                </button>
               </div>
               <div className={`table ${styles.courseTable}`}>
                 <div className={`table-head ${styles.courseTableHead}`}>
                   <div>Exam name</div>
                   <div>Description</div>
                   <div></div>
+                  <div></div>
                 </div>
                 {exams.map((exam) => (
                   <div className={`table-row ${styles.courseTableRow}`} key={exam.id}>
                     <div className="strong">{exam.title}</div>
-                    <div>{exam.description || "—"}</div>
+                    <div>{exam.description || "-"}</div>
                     <a
                       className={`primary-btn ${styles.viewExamBtn}`}
                       href={`/prof/exam?courseId=${effectiveCourseId}&examId=${exam.id}`}
                     >
                       View Exam
                     </a>
+                    <button
+                      className={styles.deleteExamBtn}
+                      type="button"
+                      onClick={() => void handleDeleteExam(exam.id)}
+                    >
+                      Delete
+                    </button>
                   </div>
                 ))}
+                {!exams.length && <div className={styles.empty}>No exams yet.</div>}
               </div>
             </section>
-
             <section className={styles.studentPanel}>
               <div className={styles.studentHeadRow}>
                 <div className={styles.sectionTitle}>Students</div>
@@ -338,11 +492,19 @@ export default function ProfCourseClient({
                 <div className={styles.studentHead}>
                   <div>Name</div>
                   <div>Email</div>
+                  <div></div>
                 </div>
                 {sortedStudents.map((student) => (
                   <div className={styles.studentRow} key={student.id}>
-                    <div>{student.name || "—"}</div>
+                    <div>{student.name || "-"}</div>
                     <div className={styles.emailCell}>{student.email}</div>
+                    <button
+                      className={styles.removeStudentBtn}
+                      type="button"
+                      onClick={() => void handleRemoveStudent(student)}
+                    >
+                      Remove
+                    </button>
                   </div>
                 ))}
                 {!sortedStudents.length && (
@@ -366,19 +528,6 @@ export default function ProfCourseClient({
                   value={examForm.title}
                   onChange={(e) => setExamForm((p) => ({ ...p, title: e.target.value }))}
                   placeholder="Final Exam"
-                />
-              </label>
-              <label className={styles.field}>
-                <span>Exam PDF</span>
-                <input
-                  type="file"
-                  accept=".pdf,application/pdf"
-                  onChange={(e) =>
-                    setExamForm((p) => ({
-                      ...p,
-                      examFile: e.target.files?.[0] || null,
-                    }))
-                  }
                 />
               </label>
               <label className={styles.field}>
@@ -453,10 +602,104 @@ export default function ProfCourseClient({
         </div>
       )}
 
+      {openCourseMetaModal && (
+        <div className="modal show">
+          <div className={`modal-card ${styles.modalCard}`}>
+            <h3 className={styles.modalTitle}>Edit course data</h3>
+            <div className={styles.formGrid}>
+              <label className={styles.field}>
+                <span>Course code *</span>
+                <input
+                  type="text"
+                  value={courseForm.code}
+                  onChange={(e) => setCourseForm((p) => ({ ...p, code: e.target.value }))}
+                  placeholder="CS201"
+                />
+              </label>
+              <label className={styles.field}>
+                <span>Course name *</span>
+                <input
+                  type="text"
+                  value={courseForm.name}
+                  onChange={(e) => setCourseForm((p) => ({ ...p, name: e.target.value }))}
+                  placeholder="Intro Programming"
+                />
+              </label>
+              <label className={styles.field}>
+                <span>Semester *</span>
+                <select
+                  value={courseForm.semester}
+                  onChange={(e) => setCourseForm((p) => ({ ...p, semester: e.target.value }))}
+                >
+                  {SEMESTER_OPTIONS.map((semester) => (
+                    <option key={semester} value={semester}>
+                      {semester}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className={styles.field}>
+                <span>Status</span>
+                <select
+                  value={courseForm.status || "active"}
+                  onChange={(e) => setCourseForm((p) => ({ ...p, status: e.target.value }))}
+                >
+                  <option value="active">active</option>
+                  <option value="archived">archived</option>
+                </select>
+              </label>
+              <label className={`${styles.field} ${styles.spanAll}`}>
+                <span>Description</span>
+                <textarea
+                  value={courseForm.description || ""}
+                  onChange={(e) =>
+                    setCourseForm((p) => ({ ...p, description: e.target.value }))
+                  }
+                  placeholder="Course description"
+                />
+              </label>
+            </div>
+            <div className={styles.modalActions}>
+              <button
+                className={styles.ghostBtn}
+                type="button"
+                onClick={() => setOpenCourseMetaModal(false)}
+              >
+                Cancel
+              </button>
+              <button
+                className={`primary-btn ${styles.createBtn}`}
+                type="button"
+                onClick={handleSaveCourseMeta}
+                disabled={isSavingCourseMeta}
+              >
+                {isSavingCourseMeta ? "Saving..." : "Save course data"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       {openPeopleModal && (
         <div className="modal show">
           <div className={`modal-card ${styles.modalCard}`}>
-            <h3 className={styles.modalTitle}>Add people</h3>
+            <div className={styles.modalHeader}>
+              <h3 className={styles.modalTitle}>Add people</h3>
+              <button
+                className={styles.closeBtn}
+                type="button"
+                aria-label="Close add people"
+                onClick={() => {
+                  setOpenPeopleModal(false);
+                  setPeopleTab("single");
+                  setCsvFile(null);
+                  setCsvPreview(null);
+                  setCsvPreviewRows([]);
+                  setCsvMapping(null);
+                }}
+              >
+                x
+              </button>
+            </div>
 
             <div className={styles.tabRow}>
               <button
@@ -479,12 +722,6 @@ export default function ProfCourseClient({
               <div className={styles.modalSection}>
                 <div className={styles.modalSubTitle}>Add one student</div>
                 <div className={styles.addRow}>
-                  <input
-                    className={styles.textInput}
-                    placeholder="Name"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                  />
                   <input
                     className={styles.textInput}
                     placeholder="Email"
@@ -519,7 +756,7 @@ export default function ProfCourseClient({
                   </label>
                 </div>
                 <div className={styles.csvHint}>
-                  Use columns: <span>name,email</span>
+                  Use columns: <span>email</span> (name optional)
                 </div>
 
                 {csvPreview && (
@@ -547,9 +784,16 @@ export default function ProfCourseClient({
                       </div>
                       {csvPreviewRows.map((row, idx) => (
                         <div className={styles.csvTableRow} key={`csv-row-${idx}`}>
-                          <div>{row[csvMapping?.nameIndex ?? 0]}</div>
+                          <div>
+                            {csvMapping?.nameIndex !== null && csvMapping?.nameIndex !== undefined
+                              ? row[csvMapping.nameIndex]
+                              : deriveNameFromEmail(row[csvMapping?.emailIndex ?? 0] || "")}
+                          </div>
                           <div className={styles.emailCell}>
                             {row[csvMapping?.emailIndex ?? 1]}
+                            {enrolledEmailSet.has(
+                              (row[csvMapping?.emailIndex ?? 1] || "").toLowerCase()
+                            ) && <span className={styles.enrolledTag}>Already enrolled</span>}
                           </div>
                         </div>
                       ))}
@@ -562,18 +806,22 @@ export default function ProfCourseClient({
               </div>
             )}
 
+          </div>
+        </div>
+      )}
+
+      {enrolledNotice && (
+        <div className="modal show">
+          <div className={`modal-card ${styles.modalCard}`}>
+            <h3 className={styles.modalTitle}>Student Already Enrolled</h3>
+            <p className={styles.modalText}>
+              The student <strong>{enrolledNotice}</strong> is already in this course.
+            </p>
             <div className={styles.modalActions}>
               <button
                 className={styles.ghostBtn}
                 type="button"
-                onClick={() => {
-                  setOpenPeopleModal(false);
-                  setPeopleTab("single");
-                  setCsvFile(null);
-                  setCsvPreview(null);
-                  setCsvPreviewRows([]);
-                  setCsvMapping(null);
-                }}
+                onClick={() => setEnrolledNotice(null)}
               >
                 Close
               </button>
@@ -584,3 +832,10 @@ export default function ProfCourseClient({
     </div>
   );
 }
+
+
+
+
+
+
+

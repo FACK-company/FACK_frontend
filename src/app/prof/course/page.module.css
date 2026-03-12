@@ -23,6 +23,43 @@
   box-shadow:0 12px 26px rgba(0,0,0,.06);
 }
 
+.metaCard{
+  border:1px solid rgba(0,25,110,.12);
+  border-radius:4px;
+  padding:12px;
+  margin-bottom:12px;
+  display:flex;
+  align-items:flex-end;
+  justify-content:space-between;
+  gap:12px;
+}
+
+.metaGrid{
+  flex:1;
+  display:grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap:10px 14px;
+}
+
+.metaWide{
+  grid-column: 1 / -1;
+}
+
+.metaLabel{
+  font-size:11px;
+  text-transform:uppercase;
+  letter-spacing:.08em;
+  color:rgba(0,25,110,.6);
+  font-weight:800;
+}
+
+.metaValue{
+  margin-top:4px;
+  color:var(--navy);
+  font-weight:700;
+  overflow-wrap:anywhere;
+}
+
 .sectionTitle{
   font-size:18px;
   font-weight:800;
@@ -73,7 +110,7 @@
 
 .addRow{
   display:grid;
-  grid-template-columns: repeat(6, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap:10px;
   margin-bottom:10px;
 }
@@ -82,9 +119,6 @@
   grid-column: span 2;
 }
 
-.addRow .textInput:nth-of-type(2){
-  grid-column: span 2;
-}
 
 
 .textInput{
@@ -141,7 +175,7 @@
 .studentHead,
 .studentRow{
   display:grid;
-  grid-template-columns: 1.4fr 1.6fr;
+  grid-template-columns: 1.2fr 1.5fr 0.8fr;
   gap:10px;
   align-items:center;
   padding:12px 14px;
@@ -167,11 +201,12 @@
 
 .courseTableHead,
 .courseTableRow{
-  grid-template-columns: minmax(160px, 1.2fr) minmax(200px, 1.4fr) minmax(150px, 0.9fr);
+  grid-template-columns: minmax(200px, 1.5fr) minmax(260px, 1.6fr) 150px 110px;
 }
 
 .courseTableRow{
   min-height:100px;
+  align-items:center;
 }
 
 .courseTableRow > div{
@@ -181,13 +216,66 @@
 
 .courseTableRow > a{
   justify-self:end;
-  width:100%;
-  max-width:170px;
+  width:auto;
+  min-width:92px;
+  padding:0 12px;
+  transform: translateX(-6px);
 }
 
 .viewExamBtn{
-  width:100%;
-  min-width:0;
+  height:36px;
+  font-size:14px;
+}
+
+.deleteExamBtn{
+  height:36px;
+  width:auto;
+  min-width:92px;
+  padding:0 12px;
+  border-radius:4px;
+  border:1px solid #ef4444;
+  background:#fff;
+  color:#b91c1c;
+  font-weight:700;
+  font-size:14px;
+  cursor:pointer;
+  justify-self:end;
+  margin-right:0;
+  transform: translateX(-24px);
+}
+
+.courseTableHead > div:nth-child(3),
+.courseTableHead > div:nth-child(4){
+  justify-self:center;
+  text-align:center;
+}
+
+.courseTableHead > div:nth-child(1),
+.courseTableHead > div:nth-child(2){
+  justify-self:start;
+  text-align:left;
+}
+
+.courseTableRow > div:nth-child(1),
+.courseTableRow > div:nth-child(2){
+  justify-self:start;
+}
+
+.removeStudentBtn{
+  height:32px;
+  width:auto;
+  min-width:86px;
+  padding:0 10px;
+  border-radius:4px;
+  border:1px solid #ef4444;
+  background:#fff;
+  color:#b91c1c;
+  font-weight:700;
+  font-size:14px;
+  cursor:pointer;
+  justify-self:end;
+  margin-right:0;
+  transform: translateX(-24px);
 }
 
 .errorText{
@@ -211,6 +299,40 @@
   font-size:22px;
   font-weight:800;
   color:var(--navy);
+}
+
+.modalHeader{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  margin:0 0 12px;
+}
+
+.modalHeader .modalTitle{
+  margin:0;
+}
+
+.closeBtn{
+  height:36px;
+  width:36px;
+  border-radius:999px;
+  border:1px solid rgba(0,25,110,.25);
+  background:#fff;
+  color:var(--navy);
+  font-weight:800;
+  font-size:20px;
+  line-height:1;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  cursor:pointer;
+}
+
+.modalText{
+  margin:0 0 16px;
+  color:rgba(0,25,110,.8);
+  font-weight:600;
 }
 
 .modalSection{
@@ -259,6 +381,20 @@
 .csvHint span{
   font-weight:800;
   color:rgba(0,25,110,.85);
+}
+
+.enrolledTag{
+  display:inline-flex;
+  align-items:center;
+  margin-left:8px;
+  padding:2px 8px;
+  border-radius:999px;
+  font-size:11px;
+  font-weight:800;
+  text-transform:uppercase;
+  letter-spacing:.04em;
+  background:rgba(255, 193, 7, 0.2);
+  color:#9a3412;
 }
 
 .csvPreview{
@@ -330,7 +466,8 @@
 }
 
 .field input,
-.field textarea{
+.field textarea,
+.field select{
   width:100%;
   border:1px solid rgba(0,25,110,.2);
   border-radius:4px;
@@ -341,6 +478,11 @@
 
 .field input{
   height:44px;
+}
+
+.field select{
+  height:44px;
+  background:#fff;
 }
 
 .field input[type="file"]{
@@ -399,9 +541,18 @@
     grid-column: span 2;
   }
 
+  .metaCard{
+    flex-direction:column;
+    align-items:stretch;
+  }
+
+  .metaGrid{
+    grid-template-columns: 1fr 1fr;
+  }
+
   .courseTableHead,
   .courseTableRow{
-    grid-template-columns: 1.2fr 1fr 180px;
+    grid-template-columns: 1.3fr 1.3fr 1fr 1fr;
   }
 
   .viewExamBtn{

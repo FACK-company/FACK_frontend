@@ -73,7 +73,8 @@
   text-align:left;
 }
 
-.field input{
+.field input,
+.field select{
   height:48px;
   border-radius:4px;
   border:1px solid rgba(0,25,110,.2);
@@ -81,6 +82,10 @@
   font:inherit;
   color:var(--navy);
   width:100%;
+}
+
+.field select{
+  background:#fff;
 }
 
 .errorText{

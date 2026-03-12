@@ -830,6 +830,15 @@ export const mainApi = {
     });
   },
 
+  async updateCourse(courseId: string, payload: AddProfessorCourseRequest): Promise<ProfessorCourse> {
+    return fetchServer<ProfessorCourse>({
+      baseUrl: mainApiBaseUrl,
+      path: `/courses/${courseId}`,
+      method: "PUT",
+      body: payload,
+    });
+  },
+
   async getCourseStudents(courseId: string): Promise<Student[]> {
     // PLACEHOLDER ONLY: remove this mock branch when course-students backend is ready.
     if (MOCK_SERVER_TRUE) {
@@ -840,6 +849,14 @@ export const mainApi = {
       baseUrl: mainApiBaseUrl,
       path: `/course-enrollments/by-course/${courseId}`,
       method: "GET",
+    });
+  },
+
+  async removeStudentFromCourse(courseId: string, studentId: string): Promise<void> {
+    await fetchServer<void>({
+      baseUrl: mainApiBaseUrl,
+      path: `/enrollments/course/${courseId}/student/${studentId}`,
+      method: "DELETE",
     });
   },
 
@@ -1008,6 +1025,14 @@ export const mainApi = {
         startAvailableAt: payload.startAvailableAt,
         endAvailableAt: payload.endAvailableAt,
       },
+    });
+  },
+
+  async deleteExam(examId: string): Promise<void> {
+    await fetchServer<void>({
+      baseUrl: mainApiBaseUrl,
+      path: `/exams/${examId}`,
+      method: "DELETE",
     });
   },
 

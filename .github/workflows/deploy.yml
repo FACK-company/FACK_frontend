@@ -1,0 +1,31 @@
+name: Production Deployment
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: SSH and Rebuild
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.REMOTE_HOST }}
+          username: ${{ secrets.REMOTE_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            # Navigate to the project directory
+            cd /var/www/fack-project/frontend
+            
+            # Pull latest changes from GitHub
+            git pull origin main
+            
+            # Rebuild and restart containers
+            # --build ensures Docker picks up code changes
+            # -d runs in detached mode
+            docker-compose up -d --build
+            
+            # Clean up old/unused images to save disk space
+            docker image prune -f
