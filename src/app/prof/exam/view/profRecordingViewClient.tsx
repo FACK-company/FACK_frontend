@@ -257,6 +257,14 @@ export default function ProfRecordingViewClient({
                       autoPlay={sessionData.status === "running"}
                       preload="metadata"
                       src={streamUrl}
+                      onLoadedMetadata={(e) => {
+                        const target = e.currentTarget;
+                        console.log(
+                          "Video Metadata Loaded:",
+                          "\nResolution:", target.videoWidth, "x", target.videoHeight,
+                          "\nDuration:", target.duration, "seconds"
+                        );
+                      }}
                       onLoadedData={() => {
                         if (sessionData && sessionData.status === "running") {
                           videoRef.current?.play().catch(() => {});
