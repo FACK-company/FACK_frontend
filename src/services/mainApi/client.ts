@@ -39,6 +39,7 @@ import {
   setAccessToken,
   setUserMetadata,
 } from "./index";
+import { connectSessionSocket, disconnectSessionSocket } from "./sessionSocket";
 
 const mainApiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL ?? "";
 
@@ -545,6 +546,10 @@ export const mainApi = {
       name: response.name || response.user?.name,
       role: response.role || response.user?.role,
     });
+    const role = String(response.role ?? response.user?.role ?? "").toLowerCase();
+    if (role === "student" && response.accessToken) {
+      connectSessionSocket(response.accessToken);
+    }
 
     return response;
   },
@@ -577,6 +582,7 @@ export const mainApi = {
         method: "POST",
       });
     } finally {
+      disconnectSessionSocket();
       clearAccessToken();
       clearUserMetadata();
     }

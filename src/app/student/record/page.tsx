@@ -2,7 +2,14 @@
 
 import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
-import { clearAccessToken, clearUserMetadata, getUserMetadata, mainApi } from "@/services";
+import {
+  clearAccessToken,
+  clearUserMetadata,
+  connectSessionSocket,
+  getUserMetadata,
+  mainApi,
+  subscribeSessionSocket,
+} from "@/services";
 import StudentNav from "../StudentNav";
 import LoadingState from "@/components/LoadingState";
 import type { StudentExamDetailResponse, StudentExamSession } from "@/types/api/main";
@@ -239,21 +246,14 @@ function StudentRecordPageContent() {
 
   useEffect(() => {
     if (!isRecording) return;
-    let stopped = false;
-    const check = async () => {
-      if (stopped || sessionReplaced) return;
-      const ok = await mainApi.checkAuthSession();
-      if (!ok) {
+    connectSessionSocket();
+    const unsubscribe = subscribeSessionSocket((event) => {
+      if (event?.type === "session_replaced") {
         setSessionReplaced(true);
       }
-    };
-    check();
-    const id = setInterval(check, 5000);
-    return () => {
-      stopped = true;
-      clearInterval(id);
-    };
-  }, [isRecording, sessionReplaced]);
+    });
+    return () => unsubscribe();
+  }, [isRecording]);
 
   // Auto-submit when timer reaches 0
   useEffect(() => {

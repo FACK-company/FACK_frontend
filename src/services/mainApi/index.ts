@@ -1,5 +1,6 @@
 // Main API exports
 import { clearAccessToken, clearUserMetadata, getAccessToken, getUserMetadata, setAccessToken, setUserMetadata } from "./session";
+import { disconnectSessionSocket } from "./sessionSocket";
 
 export interface ApiFetchOptions {
 	baseUrl?: string;
@@ -40,6 +41,7 @@ function isRecordingPostPath(path: string, method: string): boolean {
 }
 
 function handleUnauthorizedRedirect(): void {
+	disconnectSessionSocket();
 	clearAccessToken();
 	clearUserMetadata();
 	if (typeof window !== "undefined") {
@@ -223,3 +225,4 @@ export {
 	refreshAccessToken,
 };
 export * from "./client";
+export * from "./sessionSocket";
