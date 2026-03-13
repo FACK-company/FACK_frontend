@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
@@ -377,9 +377,17 @@ function StudentRecordPageContent() {
       console.log("Requesting screen recording permission...");
       setIsPermissionPending(true);
       const stream = await navigator.mediaDevices.getDisplayMedia({
-        video: true,
+        video: {
+          width: { ideal: 854, max: 854 },
+          height: { ideal: 480, max: 480 },
+          frameRate: { ideal: 15, max: 30 }
+        },
         audio: true,
       });
+
+      // Log the actual video resolution to verify
+      const videoTrackInfo = stream.getVideoTracks()[0]?.getSettings();
+      console.log("Recording started with resolution:", videoTrackInfo?.width, "x", videoTrackInfo?.height);
 
       // Enforce full-screen share (not a tab or window)
       const videoTrack = stream.getVideoTracks()[0];

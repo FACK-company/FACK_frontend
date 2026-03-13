@@ -786,13 +786,14 @@ export const mainApi = {
     });
   },
 
-   async previewRecording(payload: FinalizeRecordingPayload): Promise<void> {
-    await fetchServer({
+  async previewRecording(payload: FinalizeRecordingPayload): Promise<{ filePath?: string }> {
+    const result = await fetchServer<{ filePath?: string }>({
       baseUrl: mainApiBaseUrl,
       path: "/recordings/finalize?preview=true",
       method: "POST",
       body: payload,
     });
+    return result ?? {};
   },
 
   async getStudentExamDetail(

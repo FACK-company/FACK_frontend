@@ -64,13 +64,19 @@ export default function ProfRecordingViewClient({
             console.log("Metadata:", metadata);
             console.log("examId:", examId);
             console.log("User agent:", typeof navigator !== "undefined" ? navigator.userAgent : "unknown");
-            await mainApi.previewRecording({
+            const previewResult = await mainApi.previewRecording({
               sessionId: sessionId,
               examId,
               studentId: metadata.student.id,
               deviceInfo: typeof navigator !== "undefined" ? navigator.userAgent : "unknown",
             });
             setFinalized(true);
+            // Use the preview file path returned by backend (stream/{sessionId} still
+            // points to the student's full recording — we don't want that here).
+            const previewUrl = previewResult?.filePath
+              ? `${mainApi.getSessionRecordingUrl(sessionId).replace(/\/stream\/.*/, "")}/stream-preview/${sessionId}`
+              : mainApi.getSessionRecordingUrl(sessionId);
+            setVideoUrl(previewUrl);
           } catch (err) {
             // If finalize fails, show error but allow retry
             setError("Failed to finalize live video. Please try again.");
@@ -80,11 +86,10 @@ export default function ProfRecordingViewClient({
           }
         } else {
           setFinalized(true);
+          // Already-submitted session: stream the full recording from DB path
+          const url = mainApi.getSessionRecordingUrl(sessionId);
+          setVideoUrl(url);
         }
-
-        // After finalize (or if not live), get video URL
-        const url = mainApi.getSessionRecordingUrl(sessionId);
-        setVideoUrl(url);
         setComments([]);
       } catch (err) {
         if (!isMounted) return;
@@ -252,6 +257,14 @@ export default function ProfRecordingViewClient({
                       autoPlay={sessionData.status === "running"}
                       preload="metadata"
                       src={streamUrl}
+                      onLoadedMetadata={(e) => {
+                        const target = e.currentTarget;
+                        console.log(
+                          "Video Metadata Loaded:",
+                          "\nResolution:", target.videoWidth, "x", target.videoHeight,
+                          "\nDuration:", target.duration, "seconds"
+                        );
+                      }}
                       onLoadedData={() => {
                         if (sessionData && sessionData.status === "running") {
                           videoRef.current?.play().catch(() => {});
