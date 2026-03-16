@@ -705,6 +705,7 @@ export const mainApi = {
   },
 
   async uploadRecordingChunk(payload: UploadRecordingChunkPayload): Promise<void> {
+    console.log("[API] uploadRecordingChunk requested for session:", payload.sessionId, "index:", payload.index, "chunkSize:", payload.chunk.size);
     const formData = new FormData();
     formData.append("sessionId", payload.sessionId);
     formData.append("examId", payload.examId);
@@ -714,31 +715,52 @@ export const mainApi = {
     if (payload.deviceInfo) {
       formData.append("deviceInfo", payload.deviceInfo);
     }
-    await fetchServer({
-      baseUrl: mainApiBaseUrl,
-      path: "/recordings/chunk",
-      method: "POST",
-      body: formData,
-    });
+    
+    try {
+      await fetchServer({
+        baseUrl: mainApiBaseUrl,
+        path: "/recordings/chunk",
+        method: "POST",
+        body: formData,
+      });
+      console.log("[API] uploadRecordingChunk SUCCESS for session:", payload.sessionId, "index:", payload.index);
+    } catch (error) {
+      console.error("[API] uploadRecordingChunk FAILED for session:", payload.sessionId, "index:", payload.index, error);
+      throw error;
+    }
   },
 
   async finalizeRecording(payload: FinalizeRecordingPayload): Promise<void> {
-    await fetchServer({
-      baseUrl: mainApiBaseUrl,
-      path: "/recordings/finalize",
-      method: "POST",
-      body: payload,
-    });
+    console.log("[API] finalizeRecording requested with payload:", payload);
+    try {
+      await fetchServer({
+        baseUrl: mainApiBaseUrl,
+        path: "/recordings/finalize",
+        method: "POST",
+        body: payload,
+      });
+      console.log("[API] finalizeRecording SUCCESS");
+    } catch (error) {
+      console.error("[API] finalizeRecording FAILED:", error);
+      throw error;
+    }
   },
 
   async previewRecording(payload: FinalizeRecordingPayload): Promise<{ filePath?: string }> {
-    const result = await fetchServer<{ filePath?: string }>({
-      baseUrl: mainApiBaseUrl,
-      path: "/recordings/finalize?preview=true",
-      method: "POST",
-      body: payload,
-    });
-    return result ?? {};
+    console.log("[API] previewRecording requested with payload:", payload);
+    try {
+      const result = await fetchServer<{ filePath?: string }>({
+        baseUrl: mainApiBaseUrl,
+        path: "/recordings/finalize?preview=true",
+        method: "POST",
+        body: payload,
+      });
+      console.log("[API] previewRecording SUCCESS, result:", result);
+      return result ?? {};
+    } catch (error) {
+      console.error("[API] previewRecording FAILED:", error);
+      throw error;
+    }
   },
 
   async getStudentExamDetail(

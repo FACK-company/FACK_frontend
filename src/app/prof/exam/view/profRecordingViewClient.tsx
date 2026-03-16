@@ -60,8 +60,7 @@ export default function ProfRecordingViewClient({
         // If session is running (live), finalize it before streaming
         if (metadata.status === "running") {
           try {
-            console.log("Finalizing live recording for session:", sessionId);
-            console.log("Metadata:", metadata);
+            console.log("[PROF RECORDING VIEW] Finalizing live recording for session:", sessionId, "metadata:", metadata);
             console.log("examId:", examId);
             console.log("User agent:", typeof navigator !== "undefined" ? navigator.userAgent : "unknown");
             const previewResult = await mainApi.previewRecording({
@@ -76,8 +75,10 @@ export default function ProfRecordingViewClient({
             const previewUrl = previewResult?.filePath
               ? `${mainApi.getSessionRecordingUrl(sessionId).replace(/\/stream\/.*/, "")}/stream-preview/${sessionId}`
               : mainApi.getSessionRecordingUrl(sessionId);
+            console.log("[PROF RECORDING VIEW] Resolved live preview URL to:", previewUrl);
             setVideoUrl(previewUrl);
           } catch (err) {
+            console.error("[PROF RECORDING VIEW] Failed to finalize live video:", err);
             // If finalize fails, show error but allow retry
             setError("Failed to finalize live video. Please try again.");
             setFinalized(false);
@@ -88,6 +89,7 @@ export default function ProfRecordingViewClient({
           setFinalized(true);
           // Already-submitted session: stream the full recording from DB path
           const url = mainApi.getSessionRecordingUrl(sessionId);
+          console.log("[PROF RECORDING VIEW] Session already finalized/ended. Streaming from full path:", url);
           setVideoUrl(url);
         }
         setComments([]);
@@ -260,17 +262,28 @@ export default function ProfRecordingViewClient({
                       onLoadedMetadata={(e) => {
                         const target = e.currentTarget;
                         console.log(
-                          "Video Metadata Loaded:",
+                          "[VIDEO EVENT] LoadedMetadata:",
                           "\nResolution:", target.videoWidth, "x", target.videoHeight,
-                          "\nDuration:", target.duration, "seconds"
+                          "\nDuration:", target.duration, "seconds",
+                          "\nSrc:", target.src
                         );
                       }}
                       onLoadedData={() => {
+                        console.log("[VIDEO EVENT] LoadedData triggered.");
                         if (sessionData && sessionData.status === "running") {
-                          videoRef.current?.play().catch(() => {});
+                          videoRef.current?.play().catch((err) => console.warn("[VIDEO EVENT] Auto-play prevented:", err));
                         }
                       }}
+                      onPlay={() => console.log("[VIDEO EVENT] Play triggered.")}
+                      onPause={() => console.log("[VIDEO EVENT] Pause triggered.")}
+                      onWaiting={() => console.log("[VIDEO EVENT] Waiting for more data...")}
+                      onPlaying={() => console.log("[VIDEO EVENT] Playing started.")}
+                      onError={(e) => {
+                        const target = e.currentTarget;
+                        console.error("[VIDEO EVENT] Error occurred:", target.error);
+                      }}
                       onEnded={() => {
+                        console.log("[VIDEO EVENT] Ended.");
                         if (sessionData && sessionData.status === "running") {
                           setLiveVersion((prev) => prev + 1);
                         }

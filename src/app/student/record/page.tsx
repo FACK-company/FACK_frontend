@@ -268,7 +268,10 @@ function StudentRecordPageContent() {
     const index = chunkIndexRef.current++;
     const deviceInfo = typeof navigator !== "undefined" ? navigator.userAgent : "unknown";
 
+    console.log(`[STUDENT RECORDING] Enqueueing chunk ${index} for upload (size: ${chunk.size} bytes)`);
+
     uploadQueueRef.current = uploadQueueRef.current.then(async () => {
+      console.log(`[STUDENT RECORDING] Starting upload for chunk ${index}`);
       await mainApi.uploadRecordingChunk({
         sessionId,
         examId,
@@ -277,9 +280,11 @@ function StudentRecordPageContent() {
         chunk,
         deviceInfo,
       });
+      console.log(`[STUDENT RECORDING] Finished uploading chunk ${index}`);
     });
 
-    uploadQueueRef.current = uploadQueueRef.current.catch(() => {
+    uploadQueueRef.current = uploadQueueRef.current.catch((err) => {
+      console.error(`[STUDENT RECORDING] uploadQueueRef error on chunk ${index}:`, err);
       setError("Chunk upload failed. Please check network and retry.");
     });
   };
@@ -383,25 +388,31 @@ function StudentRecordPageContent() {
     window.focus();
 
     try {
+      console.log("[STUDENT RECORDING] Releasing media tracks...");
       const recorder = mediaRecorderRef.current;
       if (recorder && recorder.state !== "inactive") {
+        console.log("[STUDENT RECORDING] Awaiting recorder stop...");
         await new Promise<void>((resolve) => {
           recorder.addEventListener("stop", () => resolve(), { once: true });
           recorder.stop();
         });
+        console.log("[STUDENT RECORDING] Recorder stopped.");
       }
 
       mediaStreamRef.current?.getTracks().forEach((track) => track.stop());
       mediaStreamRef.current = null;
 
+      console.log("[STUDENT RECORDING] Awaiting upload queue to clear...");
       await uploadQueueRef.current;
-      console.log("payload: ", { sessionId: currentSessionId, examId, studentId: metadata.id });
+      console.log("[STUDENT RECORDING] Upload queue cleared. Finalizing recording...", { sessionId: currentSessionId, examId, studentId: metadata.id });
+      
       await mainApi.finalizeRecording({
         sessionId: currentSessionId,
         examId,
         studentId: metadata.id,
         deviceInfo: typeof navigator !== "undefined" ? navigator.userAgent : "unknown",
       });
+      console.log("[STUDENT RECORDING] Finalize recording request successful.");
 
       setIsRecording(false);
       setRecordingSessionId(null);
@@ -413,7 +424,8 @@ function StudentRecordPageContent() {
       if (exam?.courseCode) params.set("courseCode", exam.courseCode);
       if (exam?.title) params.set("examTitle", exam.title);
       router.replace(`/student/record/complete?${params.toString()}`);
-    } catch {
+    } catch (error) {
+      console.error("[STUDENT RECORDING] Error during stopRecorderAndFinalize:", error);
       setError("Unable to finalize recording. Please retry ending the exam.");
     } finally {
       setIsFinalizing(false);
