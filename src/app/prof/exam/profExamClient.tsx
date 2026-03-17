@@ -266,7 +266,7 @@ export default function ProfExamClient({
     setIsSaving(true);
     setError("");
     try {
-    //   console.log("Saving exam with details:", duration);
+      //   console.log("Saving exam with details:", duration);
       await mainApi.updateCourseExam(localDetails.courseId, localDetails.id, {
         ...editForm,
         title: trimmedTitle,
@@ -350,165 +350,164 @@ export default function ProfExamClient({
 
               {error && <div className={styles.errorText}>{error}</div>}
 
-          <div className={styles.sectionTitle}>Summary</div>
-          <div className="stats">
-            <div className="stat-card">
-              <div className="stat-label">Duration (minutes)</div>
-              {isEditing ? (
-                <input
-                  className={styles.inputField}
-                  type="number"
-                  min={1}
-                  value={editForm.durationMinutes}
-                  onChange={(event) =>
-                    setEditForm((prev) => ({
-                      ...prev,
-                      durationMinutes: Number(event.target.value || 0),
-                    }))
-                  }
-                />
-              ) : (
-                <div className="stat-value">{localDetails.durationMinutes}</div>
-              )}
-            </div>
-            <div className="stat-card">
-              <div className="stat-label">Start available at</div>
-              {isEditing ? (
-                <input
-                  className={styles.inputField}
-                  type="datetime-local"
-                  value={editForm.startAvailableAt}
-                  onChange={(event) =>
-                    setEditForm((prev) => ({
-                      ...prev,
-                      startAvailableAt: event.target.value,
-                    }))
-                  }
-                />
-              ) : (
-                <div className={styles.metaValue}>
-                  {formatDateTime(localDetails.startAvailableAt)}
-                </div>
-              )}
-            </div>
-            <div className="stat-card">
-              <div className="stat-label">End available at</div>
-              {isEditing ? (
-                <input
-                  className={styles.inputField}
-                  type="datetime-local"
-                  value={editForm.endAvailableAt}
-                  onChange={(event) =>
-                    setEditForm((prev) => ({
-                      ...prev,
-                      endAvailableAt: event.target.value,
-                    }))
-                  }
-                />
-              ) : (
-                <div className={styles.metaValue}>
-                  {formatDateTime(localDetails.endAvailableAt)}
-                </div>
-              )}
-            </div>
-          </div>
-
-          <div className={styles.sectionTitle}>Details</div>
-          <div className={`table ${styles.examTable}`}>
-            <div className={`table-head ${styles.examTableHead}`}>
-              <div>Detail</div>
-              <div>Information</div>
-            </div>
-            <div className={`table-row ${styles.examTableRow}`}>
-              <div className="strong">Description</div>
-              <div>
-                {isEditing ? (
-                  <textarea
-                    className={`${styles.inputField} ${styles.textareaField}`}
-                    value={editForm.description}
-                    onChange={(event) =>
-                      setEditForm((prev) => ({
-                        ...prev,
-                        description: event.target.value,
-                      }))
-                    }
-                    placeholder="Exam description"
-                  />
-                ) : (
-                  localDetails.description || "—"
-                )}
-              </div>
-            </div>
-          </div>
-
-          <div className={styles.sectionTitle}>Exam Sessions</div>
-          <div className={`table table-5 ${styles.recordingTable}`}>
-            <div className={`table-head ${styles.recordingTableHead}`}>
-              <div>Student</div>
-              <div>Email</div>
-              <div>Status</div>
-              <div>Duration</div>
-              <div></div>
-            </div>
-            {recordingsLoading && (
-              <div className={`table-row ${styles.recordingTableRow}`}>
-                <div>Loading exam sessions...</div>
-              </div>
-            )}
-            {!recordingsLoading && recordingsError && (
-              <div className={`table-row ${styles.recordingTableRow}`}>
-                <div className={styles.errorText}>{recordingsError}</div>
-              </div>
-            )}
-            {!recordingsLoading && !recordingsError && examSessions.length === 0 && (
-              <div className={`table-row ${styles.recordingTableRow}`}>
-                <div>No exam sessions yet.</div>
-              </div>
-            )}
-            {!recordingsLoading && !recordingsError && examSessions.map((session) => {
-              const calculateDuration = () => {
-                if (!session.endTime) return "In progress";
-                const durationSec = Math.round((new Date(session.endTime).getTime() - new Date(session.startTime).getTime()) / 1000);
-                if (durationSec < 60) return `${durationSec} sec`;
-                const durationMin = Math.round(durationSec / 60);
-                return `${durationMin} min`;
-              };
-              const duration = calculateDuration();
-              const canViewSession = Boolean(session.screenRecordingPath) || session.status === "running";
-              
-              return (
-                <div
-                  className={`table-row ${styles.recordingTableRow}`}
-                  key={session.id}
-                >
-                  <div className="strong">{session.student.name}</div>
-                  <div>{session.student.email}</div>
-                  <div
-                    className={`status-pill ${
-                      session.status === "submitted"
-                        ? "complete"
-                        : session.status === "running" || session.status === "in_progress"
-                        ? "interrupted"
-                        : "missing"
-                    }`}
-                  >
-                    {session.status}
-                  </div>
-                  <div>{duration}</div>
-                  {canViewSession ? (
-                    <a
-                      className="primary-btn"
-                      href={`/prof/recordings/view?courseId=${courseId}&examId=${examId}&sessionId=${session.id}`}
-                    >
-                      {session.status === "running" ? "View live" : "View"}
-                    </a>
+              <div className={styles.sectionTitle}>Summary</div>
+              <div className="stats">
+                <div className="stat-card">
+                  <div className="stat-label">Duration (minutes)</div>
+                  {isEditing ? (
+                    <input
+                      className={styles.inputField}
+                      type="number"
+                      min={1}
+                      value={editForm.durationMinutes}
+                      onChange={(event) =>
+                        setEditForm((prev) => ({
+                          ...prev,
+                          durationMinutes: Number(event.target.value || 0),
+                        }))
+                      }
+                    />
                   ) : (
-                    <div className={styles.noRecording}>No recording</div>
+                    <div className="stat-value">{localDetails.durationMinutes}</div>
                   )}
                 </div>
-              );
-            })}
-          </div>
+                <div className="stat-card">
+                  <div className="stat-label">Start available at</div>
+                  {isEditing ? (
+                    <input
+                      className={styles.inputField}
+                      type="datetime-local"
+                      value={editForm.startAvailableAt}
+                      onChange={(event) =>
+                        setEditForm((prev) => ({
+                          ...prev,
+                          startAvailableAt: event.target.value,
+                        }))
+                      }
+                    />
+                  ) : (
+                    <div className={styles.metaValue}>
+                      {formatDateTime(localDetails.startAvailableAt)}
+                    </div>
+                  )}
+                </div>
+                <div className="stat-card">
+                  <div className="stat-label">End available at</div>
+                  {isEditing ? (
+                    <input
+                      className={styles.inputField}
+                      type="datetime-local"
+                      value={editForm.endAvailableAt}
+                      onChange={(event) =>
+                        setEditForm((prev) => ({
+                          ...prev,
+                          endAvailableAt: event.target.value,
+                        }))
+                      }
+                    />
+                  ) : (
+                    <div className={styles.metaValue}>
+                      {formatDateTime(localDetails.endAvailableAt)}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className={styles.sectionTitle}>Details</div>
+              <div className={`table ${styles.examTable}`}>
+                <div className={`table-head ${styles.examTableHead}`}>
+                  <div>Detail</div>
+                  <div>Information</div>
+                </div>
+                <div className={`table-row ${styles.examTableRow}`}>
+                  <div className="strong">Description</div>
+                  <div>
+                    {isEditing ? (
+                      <textarea
+                        className={`${styles.inputField} ${styles.textareaField}`}
+                        value={editForm.description}
+                        onChange={(event) =>
+                          setEditForm((prev) => ({
+                            ...prev,
+                            description: event.target.value,
+                          }))
+                        }
+                        placeholder="Exam description"
+                      />
+                    ) : (
+                      localDetails.description || "—"
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              <div className={styles.sectionTitle}>Exam Sessions</div>
+              <div className={`table table-5 ${styles.recordingTable}`}>
+                <div className={`table-head ${styles.recordingTableHead}`}>
+                  <div>Student</div>
+                  <div>Email</div>
+                  <div>Status</div>
+                  <div>Duration</div>
+                  <div></div>
+                </div>
+                {recordingsLoading && (
+                  <div className={`table-row ${styles.recordingTableRow}`}>
+                    <div>Loading exam sessions...</div>
+                  </div>
+                )}
+                {!recordingsLoading && recordingsError && (
+                  <div className={`table-row ${styles.recordingTableRow}`}>
+                    <div className={styles.errorText}>{recordingsError}</div>
+                  </div>
+                )}
+                {!recordingsLoading && !recordingsError && examSessions.length === 0 && (
+                  <div className={`table-row ${styles.recordingTableRow}`}>
+                    <div>No exam sessions yet.</div>
+                  </div>
+                )}
+                {!recordingsLoading && !recordingsError && examSessions.map((session) => {
+                  const calculateDuration = () => {
+                    if (!session.endTime) return "In progress";
+                    const durationSec = Math.round((new Date(session.endTime).getTime() - new Date(session.startTime).getTime()) / 1000);
+                    if (durationSec < 60) return `${durationSec} sec`;
+                    const durationMin = Math.round(durationSec / 60);
+                    return `${durationMin} min`;
+                  };
+                  const duration = calculateDuration();
+                  const canViewSession = Boolean(session.screenRecordingPath) || session.status === "running";
+
+                  return (
+                    <div
+                      className={`table-row ${styles.recordingTableRow}`}
+                      key={session.id}
+                    >
+                      <div className="strong">{session.student?.name || "Unknown Student"}</div>
+                      <div>{session.student?.email || "Unknown Email"}</div>
+                      <div
+                        className={`status-pill ${session.status === "submitted"
+                            ? "complete"
+                            : session.status === "running" || session.status === "in_progress"
+                              ? "interrupted"
+                              : "missing"
+                          }`}
+                      >
+                        {session.status}
+                      </div>
+                      <div>{duration}</div>
+                      {canViewSession ? (
+                        <a
+                          className="primary-btn"
+                          href={`/prof/recordings/view?courseId=${courseId}&examId=${examId}&sessionId=${session.id}`}
+                        >
+                          {session.status === "running" ? "View live" : "View"}
+                        </a>
+                      ) : (
+                        <div className={styles.noRecording}>No recording</div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
             </>
           )}
         </section>
