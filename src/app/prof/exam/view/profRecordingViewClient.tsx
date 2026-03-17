@@ -48,7 +48,7 @@ export default function ProfRecordingViewClient({
   const refreshInFlightRef = useRef(false);
   const pendingSeekRef = useRef<{ time: number; wasPlaying: boolean } | null>(null);
 
-  const LIVE_REFRESH_MS = 10000;
+  const LIVE_REFRESH_MS = 120000;
 
   useEffect(() => {
     let isMounted = true;
@@ -176,7 +176,7 @@ export default function ProfRecordingViewClient({
   const handleJumpTo = (timestampSec: number) => {
     if (!videoRef.current) return;
     videoRef.current.currentTime = timestampSec;
-    videoRef.current.play().catch(() => {});
+    videoRef.current.play().catch(() => { });
   };
 
   const handleAddComment = async () => {
@@ -309,7 +309,7 @@ export default function ProfRecordingViewClient({
                           const safeTime = Math.max(0, Math.min(pending.time, Math.max(0, target.duration - 0.1)));
                           target.currentTime = Number.isFinite(safeTime) ? safeTime : 0;
                           if (pending.wasPlaying) {
-                            target.play().catch(() => {});
+                            target.play().catch(() => { });
                           }
                           pendingSeekRef.current = null;
                         }
