@@ -210,7 +210,7 @@ export default function ProfExamClient({
       void loadExamSessions();
       timer = setInterval(() => {
         void loadExamSessions();
-      }, 10000);
+      }, 30000);
     }
 
     return () => {
@@ -442,12 +442,14 @@ export default function ProfExamClient({
               </div>
 
               <div className={styles.sectionTitle}>Exam Sessions</div>
-              <div className={`table table-5 ${styles.recordingTable}`}>
+              <div className={`table table-7 ${styles.recordingTable}`}>
                 <div className={`table-head ${styles.recordingTableHead}`}>
                   <div>Student</div>
                   <div>Email</div>
                   <div>Status</div>
                   <div>Duration</div>
+                  <div>Started At</div>
+                  <div>Ended At</div>
                   <div></div>
                 </div>
                 {recordingsLoading && (
@@ -476,6 +478,13 @@ export default function ProfExamClient({
                   const duration = calculateDuration();
                   const canViewSession = Boolean(session.screenRecordingPath) || session.status === "running";
 
+                  const formatTime = (timeStr?: string | null) => {
+                    if (!timeStr) return "—";
+                    const d = new Date(timeStr);
+                    if (Number.isNaN(d.getTime())) return "—";
+                    return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
+                  };
+
                   return (
                     <div
                       className={`table-row ${styles.recordingTableRow}`}
@@ -485,15 +494,17 @@ export default function ProfExamClient({
                       <div>{session.student?.email || "Unknown Email"}</div>
                       <div
                         className={`status-pill ${session.status === "submitted"
-                            ? "complete"
-                            : session.status === "running" || session.status === "in_progress"
-                              ? "interrupted"
-                              : "missing"
+                          ? "complete"
+                          : session.status === "running" || session.status === "in_progress"
+                            ? "interrupted"
+                            : "missing"
                           }`}
                       >
                         {session.status}
                       </div>
                       <div>{duration}</div>
+                      <div>{formatTime(session?.startTime)}</div>
+                      <div>{formatTime(session?.endTime)}</div>
                       {canViewSession ? (
                         <a
                           className="primary-btn"

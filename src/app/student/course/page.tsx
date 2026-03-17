@@ -51,7 +51,7 @@ function StudentCoursePageContent() {
 
   const course = courses.find((item) => item.id === courseId);
   const courseTitle = course ? `${course.code} - ${course.name}` : "Course Exams";
-
+  console.log("exam: ", exams);
   return (
     <div className={`page ${styles.pageBg}`}>
       <StudentNav username={username} />
@@ -69,49 +69,49 @@ function StudentCoursePageContent() {
               exams.map((exam) => {
                 const isEnded = exam.status === "Ended";
                 return (
-                <article className={styles.examCard} key={exam.id}>
-                  <div className={styles.examRow}>
-                    <div>
-                      <div className={styles.label}>Exam name</div>
-                      <div className={styles.value}>{exam.title}</div>
-                    </div>
-                    <span
-                      className={`${styles.badge} ${
-                        exam.status === "In progress"
+                  <article className={styles.examCard} key={exam.id}>
+                    <div className={styles.examRow}>
+                      <div>
+                        <div className={styles.label}>Exam name</div>
+                        <div className={styles.value}>{exam.title}</div>
+                      </div>
+                      <span
+                        className={`${styles.badge} ${exam.status === "In progress"
                           ? styles.inProgress
                           : exam.status === "Submitted"
-                          ? styles.submitted
-                          : exam.status === "Ended"
-                          ? styles.ended
-                          : styles.notStarted
-                      }`}
-                    >
-                      {exam.status}
-                    </span>
-                  </div>
-                  <div className={styles.examGrid}>
-                    <div>
-                      <div className={styles.label}>Course</div>
-                      <div className={styles.value}>{exam.courseCode}</div>
+                            ? styles.submitted
+                            : exam.status === "Ended"
+                              ? styles.ended
+                              : styles.notStarted
+                          }`}
+                      >
+                        {exam.status}
+                      </span>
                     </div>
-                    <div>
-                      <div className={styles.label}>Time window</div>
-                      <div className={styles.value}>{exam.timeWindow}</div>
+                    <div className={styles.examGrid}>
+                      {/* <div>
+                        <div className={styles.label}>Course</div>
+                        <div className={styles.value}>{exam.courseCode}</div>
+                      </div> */}
+                      <div>
+                        <div className={styles.label}>Time window</div>
+                        <div className={styles.value}>{exam.timeWindow}</div>
+                      </div>
+                      <div className={styles.cta}>
+                        {!isEnded && (
+                          <a
+                            className={`primary-btn ${styles.enterBtn}`}
+                            href={`/student/record?courseId=${exam.courseId}&examId=${exam.id}`}
+                          >
+                            {exam.status === "Not started" ? "Preview" : "Enter Exam"}
+                          </a>
+                        )}
+                        {isEnded && <div className={styles.ctaSpacer} aria-hidden="true" />}
+                      </div>
                     </div>
-                    <div className={styles.cta}>
-                      {!isEnded && (
-                        <a
-                          className={`primary-btn ${styles.enterBtn}`}
-                          href={`/student/record?courseId=${exam.courseId}&examId=${exam.id}`}
-                        >
-                          {exam.status === "Not started" ? "Preview" : "Enter Exam"}
-                        </a>
-                      )}
-                      {isEnded && <div className={styles.ctaSpacer} aria-hidden="true" />}
-                    </div>
-                  </div>
-                </article>
-              )})}
+                  </article>
+                )
+              })}
             {!loading && !exams.length && <div className={styles.empty}>No exams available.</div>}
           </div>
         </section>

@@ -103,7 +103,7 @@
 
 .recordingTable .recordingTableHead,
 .recordingTable .recordingTableRow{
-  grid-template-columns: minmax(150px, 0.75fr) minmax(220px, 1.3fr) minmax(100px, 0.5fr) minmax(90px, 0.45fr) minmax(120px, 0.6fr) !important;
+  grid-template-columns: minmax(130px, 0.75fr) minmax(180px, 1.1fr) minmax(90px, 0.5fr) minmax(80px, 0.4fr) minmax(80px, 0.4fr) minmax(80px, 0.4fr) minmax(110px, 0.55fr) !important;
 }
 
 .recordingTableRow{
@@ -113,6 +113,12 @@
 .recordingTableRow > div{
   display:flex;
   align-items:center;
+  font-size:13px;
+}
+
+.recordingTableRow > div:nth-child(2){
+  font-size:12px;
+  word-break:break-all;
 }
 
 .viewBtn{

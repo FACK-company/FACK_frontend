@@ -405,7 +405,7 @@ function StudentRecordPageContent() {
       console.log("[STUDENT RECORDING] Awaiting upload queue to clear...");
       await uploadQueueRef.current;
       console.log("[STUDENT RECORDING] Upload queue cleared. Finalizing recording...", { sessionId: currentSessionId, examId, studentId: metadata.id });
-      
+
       await mainApi.finalizeRecording({
         sessionId: currentSessionId,
         examId,
@@ -479,16 +479,16 @@ function StudentRecordPageContent() {
             <section className="panel left">
               <h2 className={styles.sectionTitle}>Exam metadata</h2>
               <div className={`meta ${styles.metaTable}`}>
-                <div className="row">
+                {/* <div className="row">
                   <div className="k">Course</div>
                   <div className="v">{exam.courseCode}</div>
-                </div>
+                </div> */}
                 <div className={`row ${styles.descriptionRow}`}>
                   <div className="k">Description</div>
                   <div className={`v ${styles.descriptionValue}`}>{exam.description || "-"}</div>
                 </div>
                 <div className="row">
-                  <div className="k">Duration</div>
+                  <div className="k">Allowed Duration</div>
                   <div className="v">{exam.durationMinutes} minutes</div>
                 </div>
                 <div className="row">
