@@ -42,8 +42,13 @@ export default function ProfRecordingViewClient({
   const [liveVersion, setLiveVersion] = useState(0);
   const [finalizing, setFinalizing] = useState(false);
   const [finalized, setFinalized] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   const videoRef = useRef<HTMLVideoElement | null>(null);
+  const refreshInFlightRef = useRef(false);
+  const pendingSeekRef = useRef<{ time: number; wasPlaying: boolean } | null>(null);
+
+  const LIVE_REFRESH_MS = 10000;
 
   useEffect(() => {
     let isMounted = true;
@@ -120,15 +125,39 @@ export default function ProfRecordingViewClient({
   useEffect(() => {
     if (sessionData?.status !== "running") return;
 
-    const timer = setInterval(() => {
+    const timer = setInterval(async () => {
+      if (refreshInFlightRef.current) return;
+      if (!sessionData?.student?.id) return;
+
       const video = videoRef.current;
-      if (!video || video.paused || video.ended) {
+      if (video && video.paused) return;
+
+      refreshInFlightRef.current = true;
+      setIsRefreshing(true);
+      try {
+        if (video) {
+          pendingSeekRef.current = {
+            time: video.currentTime || 0,
+            wasPlaying: !video.paused && !video.ended,
+          };
+        }
+        await mainApi.previewRecording({
+          sessionId,
+          examId,
+          studentId: sessionData.student.id,
+          deviceInfo: typeof navigator !== "undefined" ? navigator.userAgent : "unknown",
+        });
         setLiveVersion((prev) => prev + 1);
+      } catch (err) {
+        console.error("[PROF RECORDING VIEW] Auto-refresh preview failed:", err);
+      } finally {
+        refreshInFlightRef.current = false;
+        setIsRefreshing(false);
       }
-    }, 4000);
+    }, LIVE_REFRESH_MS);
 
     return () => clearInterval(timer);
-  }, [sessionData?.status]);
+  }, [sessionData?.status, sessionData?.student?.id, sessionId, examId]);
 
   const formatDateTime = (dateString: string) => {
     if (!isMounted) return "Loading...";
@@ -182,7 +211,12 @@ export default function ProfRecordingViewClient({
     return `${durationMin} min`;
   };
 
-  const streamUrl = videoUrl;
+  const streamUrl = useMemo(() => {
+    if (!videoUrl) return "";
+    if (sessionData?.status !== "running") return videoUrl;
+    const sep = videoUrl.includes("?") ? "&" : "?";
+    return `${videoUrl}${sep}v=${liveVersion}`;
+  }, [videoUrl, sessionData?.status, liveVersion]);
   // ...existing code...
   return (
     <div className={`page ${styles.pageBg}`}>
@@ -250,7 +284,10 @@ export default function ProfRecordingViewClient({
                 {videoUrl && sessionData && (sessionData.screenRecordingPath || sessionData.status === "running") ? (
                   <section className={`player ${styles.player}`}>
                     {sessionData.status === "running" && (
-                      <div className={styles.emptyText}>Live preview (running session). Refresh to get newest chunks.</div>
+                      <div className={styles.emptyText}>
+                        Live preview (running session). Auto-refreshing every {Math.round(LIVE_REFRESH_MS / 1000)}s
+                        {isRefreshing ? " — refreshing…" : ""}.
+                      </div>
                     )}
                     <video
                       ref={videoRef}
@@ -267,6 +304,15 @@ export default function ProfRecordingViewClient({
                           "\nDuration:", target.duration, "seconds",
                           "\nSrc:", target.src
                         );
+                        const pending = pendingSeekRef.current;
+                        if (pending) {
+                          const safeTime = Math.max(0, Math.min(pending.time, Math.max(0, target.duration - 0.1)));
+                          target.currentTime = Number.isFinite(safeTime) ? safeTime : 0;
+                          if (pending.wasPlaying) {
+                            target.play().catch(() => {});
+                          }
+                          pendingSeekRef.current = null;
+                        }
                       }}
                       onLoadedData={() => {
                         console.log("[VIDEO EVENT] LoadedData triggered.");

@@ -146,6 +146,9 @@ function StudentRecordPageContent() {
   const chunkIndexRef = useRef(0);
   const sessionIdRef = useRef<string | null>(null);
   const stopRecorderAndFinalizeRef = useRef<(() => Promise<void>) | undefined>(undefined);
+  const segmentStopTimerRef = useRef<number | null>(null);
+  const isRecordingRef = useRef(false);
+  const isFinalizingRef = useRef(false);
 
   useEffect(() => {
     let isMounted = true;
@@ -176,6 +179,12 @@ function StudentRecordPageContent() {
         mediaRecorderRef.current.stop();
       }
       mediaStreamRef.current?.getTracks().forEach((track) => track.stop());
+      if (segmentStopTimerRef.current) {
+        window.clearTimeout(segmentStopTimerRef.current);
+        segmentStopTimerRef.current = null;
+      }
+      isRecordingRef.current = false;
+      isFinalizingRef.current = false;
     };
   }, [courseId, examId]);
 
@@ -289,6 +298,47 @@ function StudentRecordPageContent() {
     });
   };
 
+  const scheduleSegmentStop = (recorder: MediaRecorder, segmentMs: number) => {
+    if (segmentStopTimerRef.current) {
+      window.clearTimeout(segmentStopTimerRef.current);
+    }
+    segmentStopTimerRef.current = window.setTimeout(() => {
+      if (recorder.state !== "inactive" && !isFinalizingRef.current) {
+        recorder.stop();
+      }
+    }, segmentMs);
+  };
+
+  const startSegmentRecorder = (
+    stream: MediaStream,
+    mimeType: string,
+    sessionId: string,
+    studentId: string,
+    segmentMs: number
+  ) => {
+    const recorder = new MediaRecorder(stream, { mimeType });
+    mediaRecorderRef.current = recorder;
+
+    recorder.ondataavailable = (event) => {
+      if (event.data && event.data.size > 0) {
+        enqueueChunkUpload(sessionId, studentId, event.data);
+      }
+    };
+
+    recorder.onstop = () => {
+      if (segmentStopTimerRef.current) {
+        window.clearTimeout(segmentStopTimerRef.current);
+        segmentStopTimerRef.current = null;
+      }
+      if (isRecordingRef.current && !isFinalizingRef.current) {
+        startSegmentRecorder(stream, mimeType, sessionId, studentId, segmentMs);
+      }
+    };
+
+    recorder.start();
+    scheduleSegmentStop(recorder, segmentMs);
+  };
+
   const startRecording = async () => {
     const metadata = getUserMetadata();
     console.log("Starting recording with user metadata:", metadata);
@@ -335,10 +385,8 @@ function StudentRecordPageContent() {
       console.log("Screen recording permission granted. Starting recorder...");
       const sessionId = generateSessionId();
       const mimeType = getRecordingMimeType();
-      const recorder = new MediaRecorder(stream, { mimeType });
 
       mediaStreamRef.current = stream;
-      mediaRecorderRef.current = recorder;
       chunkIndexRef.current = 0;
       uploadQueueRef.current = Promise.resolve();
       setRecordingSessionId(sessionId);
@@ -351,12 +399,8 @@ function StudentRecordPageContent() {
         setError("");
       }
       setIsRecording(true);
-
-      recorder.ondataavailable = (event) => {
-        if (event.data && event.data.size > 0) {
-          enqueueChunkUpload(sessionId, metadata.id as string, event.data);
-        }
-      };
+      isRecordingRef.current = true;
+      isFinalizingRef.current = false;
 
       stream.getVideoTracks().forEach((track) => {
         track.onended = () => {
@@ -364,7 +408,7 @@ function StudentRecordPageContent() {
         };
       });
 
-      recorder.start(4000);
+      startSegmentRecorder(stream, mimeType, sessionId, metadata.id as string, 4000);
     } catch {
       // setError("Screen recording permission denied or not available.");
       setIsRecording(false);
@@ -384,6 +428,8 @@ function StudentRecordPageContent() {
     }
 
     setIsFinalizing(true);
+    isFinalizingRef.current = true;
+    isRecordingRef.current = false;
     setShowStopModal(false);
     window.focus();
 
@@ -397,6 +443,11 @@ function StudentRecordPageContent() {
           recorder.stop();
         });
         console.log("[STUDENT RECORDING] Recorder stopped.");
+      }
+
+      if (segmentStopTimerRef.current) {
+        window.clearTimeout(segmentStopTimerRef.current);
+        segmentStopTimerRef.current = null;
       }
 
       mediaStreamRef.current?.getTracks().forEach((track) => track.stop());
@@ -415,6 +466,7 @@ function StudentRecordPageContent() {
       console.log("[STUDENT RECORDING] Finalize recording request successful.");
 
       setIsRecording(false);
+      isRecordingRef.current = false;
       setRecordingSessionId(null);
       sessionIdRef.current = null;
       setRemainingSec(0);
