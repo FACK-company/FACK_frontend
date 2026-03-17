@@ -88,6 +88,9 @@ export default function RecordingPage() {
     const streamRef = useRef<MediaStream | null>(null);
     const sessionIdRef = useRef<string>('');
     const chunkIndexRef = useRef(0);
+    const segmentStopTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const isRecordingRef = useRef(false);
+    const isFinalizingRef = useRef(false);
 
     // Upload queue: blobs are pushed here; a single async drainer processes them in order
     const queueRef = useRef<Blob[]>([]);
@@ -144,11 +147,6 @@ export default function RecordingPage() {
         setElapsed(0);
     }, []);
 
-    const cleanUpStream = useCallback(() => {
-        streamRef.current?.getTracks().forEach((t) => t.stop());
-        streamRef.current = null;
-    }, []);
-
     // Called when MediaRecorder fully stops — drain queue then finalize
     const handleRecorderStop = useCallback(async () => {
         stopTimer();
@@ -172,6 +170,56 @@ export default function RecordingPage() {
             setStatus({ kind: 'error', message: msg });
         }
     }, [stopTimer, waitForDrain]);
+
+    const cleanUpStream = useCallback(() => {
+        streamRef.current?.getTracks().forEach((t) => t.stop());
+        streamRef.current = null;
+    }, []);
+
+    const scheduleSegmentStop = useCallback((recorder: MediaRecorder, segmentMs: number) => {
+        if (segmentStopTimerRef.current) {
+            clearTimeout(segmentStopTimerRef.current);
+        }
+        segmentStopTimerRef.current = setTimeout(() => {
+            if (recorder.state !== 'inactive' && !isFinalizingRef.current) {
+                recorder.stop();
+            }
+        }, segmentMs);
+    }, []);
+
+    const startSegmentRecorder = useCallback((stream: MediaStream, mime: string) => {
+        const recorder = new MediaRecorder(stream, mime ? { mimeType: mime } : undefined);
+        recorderRef.current = recorder;
+
+        recorder.ondataavailable = (e) => {
+            if (!e.data || e.data.size === 0) return;
+            queueRef.current.push(e.data);
+            drainQueue();
+        };
+
+        recorder.onerror = (e: Event) => {
+            const err = (e as Event & { error?: DOMException }).error;
+            console.error('Recorder error:', err);
+            setStatus({ kind: 'error', message: err?.message ?? 'Recorder error' });
+            cleanUpStream();
+        };
+
+        recorder.onstop = () => {
+            if (segmentStopTimerRef.current) {
+                clearTimeout(segmentStopTimerRef.current);
+                segmentStopTimerRef.current = null;
+            }
+            if (isRecordingRef.current && !isFinalizingRef.current) {
+                startSegmentRecorder(stream, mime);
+            } else {
+                cleanUpStream();
+                handleRecorderStop();
+            }
+        };
+
+        recorder.start();
+        scheduleSegmentStop(recorder, CHUNK_INTERVAL_MS);
+    }, [cleanUpStream, drainQueue, handleRecorderStop, scheduleSegmentStop]);
 
     const startRecording = useCallback(async () => {
         drainErrorRef.current = null;
@@ -204,33 +252,17 @@ export default function RecordingPage() {
         streamRef.current = stream;
 
         const mime = getBestMime();
-        const recorder = new MediaRecorder(stream, mime ? { mimeType: mime } : undefined);
-        recorderRef.current = recorder;
-
-        recorder.ondataavailable = (e) => {
-            if (!e.data || e.data.size === 0) return;
-            queueRef.current.push(e.data);
-            drainQueue(); // non-blocking; drainer skips if already running
-        };
-
-        recorder.onerror = (e: Event) => {
-            const err = (e as Event & { error?: DOMException }).error;
-            console.error('Recorder error:', err);
-            setStatus({ kind: 'error', message: err?.message ?? 'Recorder error' });
-            cleanUpStream();
-        };
-
-        recorder.onstop = () => {
-            cleanUpStream();
-            handleRecorderStop();
-        };
 
         // Handle user clicking the browser's native "Stop sharing" button
         stream.getVideoTracks()[0].addEventListener('ended', () => {
-            if (recorder.state !== 'inactive') recorder.stop();
+            if (recorderRef.current && recorderRef.current.state !== 'inactive') {
+                recorderRef.current.stop();
+            }
         });
 
-        recorder.start(CHUNK_INTERVAL_MS);
+        isRecordingRef.current = true;
+        isFinalizingRef.current = false;
+        startSegmentRecorder(stream, mime);
 
         setStatus({ kind: 'recording' });
 
@@ -242,9 +274,11 @@ export default function RecordingPage() {
         }, 1_000);
 
         console.log('🎬 Recording started. sessionId:', sessionIdRef.current, '| mime:', mime || '(browser default)');
-    }, [cleanUpStream, drainQueue, handleRecorderStop]);
+    }, [cleanUpStream, handleRecorderStop, startSegmentRecorder]);
 
     const stopRecording = useCallback(() => {
+        isFinalizingRef.current = true;
+        isRecordingRef.current = false;
         const recorder = recorderRef.current;
         if (recorder && recorder.state !== 'inactive') {
             recorder.stop();
@@ -257,6 +291,12 @@ export default function RecordingPage() {
             stopTimer();
             cleanUpStream();
             if (recorderRef.current?.state !== 'inactive') recorderRef.current?.stop();
+            if (segmentStopTimerRef.current) {
+                clearTimeout(segmentStopTimerRef.current);
+                segmentStopTimerRef.current = null;
+            }
+            isRecordingRef.current = false;
+            isFinalizingRef.current = false;
         };
     }, [stopTimer, cleanUpStream]);
 
