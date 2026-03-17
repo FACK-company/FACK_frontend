@@ -493,7 +493,7 @@ export default function ProfExamClient({
                       <div className="strong">{session.student?.name || "Unknown Student"}</div>
                       <div>{session.student?.email || "Unknown Email"}</div>
                       <div
-                        className={`status-pill ${session.status === "submitted"
+                        className={`status-pill ${(session.status === "submitted" || session.status === "completed")
                           ? "complete"
                           : session.status === "running" || session.status === "in_progress"
                             ? "interrupted"
