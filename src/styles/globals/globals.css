@@ -731,6 +731,11 @@ select:focus-visible{
   grid-template-columns: 1.2fr 1fr 0.8fr 0.8fr 0.8fr 0.8fr auto;
 }
 .table-7 .status-pill{ justify-self:start; }
+.table-8 .table-head,
+.table-8 .table-row{
+  grid-template-columns: 1.2fr 1fr 0.8fr 0.8fr 0.8fr 0.8fr 0.7fr auto;
+}
+.table-8 .status-pill{ justify-self:start; }
 .table-head{
   font-size:12px;
   font-weight:800;

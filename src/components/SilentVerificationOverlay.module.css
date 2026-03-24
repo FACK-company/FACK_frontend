@@ -1,0 +1,78 @@
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 2200;
+  display: grid;
+  place-items: center;
+  background: rgba(0, 25, 110, 0.45);
+}
+
+.card {
+  width: min(520px, 92vw);
+  border-radius: 4px;
+  padding: 28px 24px;
+  background: var(--white);
+  border: 1px solid rgba(0, 25, 110, 0.12);
+  box-shadow: none;
+  display: grid;
+  gap: 14px;
+  text-align: center;
+}
+
+.title {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--navy);
+}
+
+.subtitle {
+  font-size: 13px;
+  font-weight: 600;
+  color: rgba(0, 25, 110, 0.7);
+}
+
+.progressTrack {
+  height: 8px;
+  border-radius: 999px;
+  background: rgba(0, 25, 110, 0.15);
+  overflow: hidden;
+}
+
+.progressFill {
+  height: 100%;
+  width: 100%;
+  transform-origin: left;
+  animation-name: progress;
+  animation-timing-function: linear;
+  animation-fill-mode: forwards;
+  background: var(--navy);
+}
+
+.countdown {
+  font-size: 13px;
+  font-weight: 600;
+  color: rgba(0, 25, 110, 0.85);
+}
+
+.closeButton {
+  justify-self: center;
+}
+
+@keyframes progress {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+
+@media (max-width: 600px) {
+  .card {
+    padding: 22px 18px;
+  }
+
+  .title {
+    font-size: 18px;
+  }
+}
