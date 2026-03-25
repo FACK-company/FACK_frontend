@@ -103,7 +103,7 @@
 
 .recordingTable .recordingTableHead,
 .recordingTable .recordingTableRow{
-  grid-template-columns: minmax(130px, 0.75fr) minmax(180px, 1.1fr) minmax(90px, 0.5fr) minmax(80px, 0.4fr) minmax(80px, 0.4fr) minmax(80px, 0.4fr) minmax(110px, 0.55fr) !important;
+  grid-template-columns: minmax(130px, 0.75fr) minmax(180px, 1.1fr) minmax(90px, 0.5fr) minmax(80px, 0.4fr) minmax(80px, 0.4fr) minmax(80px, 0.4fr) minmax(90px, 0.45fr) minmax(110px, 0.55fr) !important;
 }
 
 .recordingTableRow{
@@ -122,8 +122,9 @@
 }
 
 .viewBtn{
-  width:190px;
-  min-width:190px;
+  min-width:120px;
+  height:38px;
+  font-size:13px;
 }
 
 
@@ -131,11 +132,6 @@
   .headerBlock{
     flex-direction:column;
     align-items:flex-start;
-  }
-
-  .viewBtn{
-    width:160px;
-    min-width:160px;
   }
 }
 
@@ -168,4 +164,37 @@
   color:rgba(0,25,110,.4);
   font-size:14px;
   text-align:center;
+}
+
+.sessionHeader{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  flex-wrap:wrap;
+}
+
+.pingActions{
+  display:flex;
+  align-items:center;
+  gap:8px;
+}
+
+.pingNotice{
+  margin:6px 0 10px;
+  font-size:13px;
+  font-weight:700;
+  color:rgba(0,25,110,.75);
+}
+
+.pingAllBtn{
+  min-width:120px;
+  height:38px;
+  font-size:13px;
+}
+
+.pingBtn{
+  min-width:120px;
+  height:38px;
+  font-size:13px;
 }

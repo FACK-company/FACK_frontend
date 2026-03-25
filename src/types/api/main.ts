@@ -253,3 +253,13 @@ export interface StudentExamDetailResponse extends StudentExamSummary {
   description: string;
   examFileUrl: string;
 }
+
+export interface PingAllResponse {
+  pingedCount: number;
+}
+
+export interface PingOneResponse {
+  pingId: string;
+  studentId: string;
+  durationSeconds: number;
+}

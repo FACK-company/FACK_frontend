@@ -27,6 +27,8 @@ import type {
   StudentExamSummary,
   StudentProfileResponse,
   ExamSession,
+  PingAllResponse,
+  PingOneResponse,
 } from "@/types/api/main";
 import {
   clearAccessToken,
@@ -1159,6 +1161,22 @@ export const mainApi = {
       baseUrl: mainApiBaseUrl,
       path: `/exam-sessions/by-exam/${examId}`,
       method: "GET",
+    });
+  },
+
+  async pingAllStudents(): Promise<PingAllResponse> {
+    return fetchServer<PingAllResponse>({
+      baseUrl: mainApiBaseUrl,
+      path: "/ping/all",
+      method: "POST",
+    });
+  },
+
+  async pingStudent(studentId: string): Promise<PingOneResponse> {
+    return fetchServer<PingOneResponse>({
+      baseUrl: mainApiBaseUrl,
+      path: `/ping/${studentId}`,
+      method: "POST",
     });
   },
 
