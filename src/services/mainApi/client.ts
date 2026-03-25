@@ -1197,4 +1197,25 @@ export const mainApi = {
       body: payload,
     });
   },
+
+  async forgotPassword(email: string): Promise<void> {
+    await fetchServer<unknown>({
+      baseUrl: mainApiBaseUrl,
+      path: "/auth/forgot-password",
+      method: "POST",
+      body: { email },
+    });
+  },
+
+  async resetPassword(token: string, newPassword: string): Promise<void> {
+    const result = await fetchServer<{ error?: string }>({
+      baseUrl: mainApiBaseUrl,
+      path: "/auth/reset-password",
+      method: "POST",
+      body: { token, newPassword },
+    });
+    if (result?.error) {
+      throw new Error(result.error);
+    }
+  },
 };

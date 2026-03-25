@@ -1,0 +1,114 @@
+.pageOverlay {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background-image: url("/img/background.png");
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+
+.card {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  max-width: 560px;
+  min-height: 400px;
+}
+
+.inner {
+  width: 100%;
+  padding: 52px 64px;
+}
+
+.title {
+  font-size: calc(20px + 0.4rem);
+  margin-bottom: 10px;
+}
+
+.description {
+  font-size: 14px;
+  color: var(--color-muted, #64748b);
+  margin-bottom: 28px;
+  line-height: 1.6;
+}
+
+.submitBtn {
+  height: 52px;
+  border-radius: 14px;
+  width: 100%;
+  font-size: 15px;
+  margin-top: 4px;
+}
+
+.backLink {
+  text-align: center;
+  margin-top: 18px;
+  font-size: 13px;
+}
+
+.backLink a {
+  color: inherit;
+  text-decoration: underline;
+  opacity: 0.7;
+}
+
+.backLink a:hover {
+  opacity: 1;
+}
+
+/* Password field with eye toggle */
+.passwordWrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.passwordField {
+  flex: 1;
+  height: 56px;
+  font-size: 14px;
+  padding-right: 48px;
+  width: 100%;
+}
+
+.eyeBtn {
+  position: absolute;
+  right: 12px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 18px;
+  padding: 0;
+  line-height: 1;
+  opacity: 0.7;
+}
+
+.eyeBtn:hover {
+  opacity: 1;
+}
+
+.strengthLabel {
+  font-size: 12px;
+  font-weight: 600;
+  margin-top: 4px;
+}
+
+.hint {
+  font-size: 11px;
+  color: var(--color-muted, #94a3b8);
+  margin-top: 4px;
+  line-height: 1.5;
+}
+
+/* Success / error boxes */
+.successBox,
+.errorBox {
+  text-align: center;
+  padding: 16px 0;
+}
+
+.successIcon {
+  font-size: 48px;
+  margin-bottom: 16px;
+}
