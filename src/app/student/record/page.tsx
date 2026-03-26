@@ -139,6 +139,7 @@ function StudentRecordPageContent() {
   const [isFinalizing, setIsFinalizing] = useState(false);
   const [recordingSessionId, setRecordingSessionId] = useState<string | null>(null);
   const [nowMs, setNowMs] = useState(Date.now());
+  const [successMessage, setSuccessMessage] = useState("");
 
   const mediaStreamRef = useRef<MediaStream | null>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -273,29 +274,70 @@ function StudentRecordPageContent() {
   const totalDurationSec = useMemo(() => deriveDurationSeconds(exam), [exam]);
   const startGate = useMemo(() => evaluateStartGate(exam, nowMs), [exam, nowMs]);
 
+  const abortRecording = (message: string) => {
+    const recorder = mediaRecorderRef.current;
+    if (recorder && recorder.state !== "inactive") {
+      recorder.onstop = null;
+      try {
+        recorder.stop();
+      } catch (e) {}
+    }
+    if (segmentStopTimerRef.current) {
+      window.clearTimeout(segmentStopTimerRef.current);
+      segmentStopTimerRef.current = null;
+    }
+    if (mediaStreamRef.current) {
+      mediaStreamRef.current.getTracks().forEach((track) => {
+        track.onended = null;
+        track.stop();
+      });
+      mediaStreamRef.current = null;
+    }
+
+    setIsRecording(false);
+    isRecordingRef.current = false;
+    isFinalizingRef.current = false;
+    setIsFinalizing(false);
+    setRecordingSessionId(null);
+    sessionIdRef.current = null;
+    setRemainingSec(0);
+    setError(message);
+    uploadQueueRef.current = Promise.resolve();
+    chunkIndexRef.current = 0;
+  };
+
   const enqueueChunkUpload = (sessionId: string, studentId: string, chunk: Blob) => {
     const index = chunkIndexRef.current++;
     const deviceInfo = typeof navigator !== "undefined" ? navigator.userAgent : "unknown";
 
     console.log(`[STUDENT RECORDING] Enqueueing chunk ${index} for upload (size: ${chunk.size} bytes)`);
 
-    uploadQueueRef.current = uploadQueueRef.current.then(async () => {
-      console.log(`[STUDENT RECORDING] Starting upload for chunk ${index}`);
-      await mainApi.uploadRecordingChunk({
-        sessionId,
-        examId,
-        studentId,
-        index,
-        chunk,
-        deviceInfo,
-      });
-      console.log(`[STUDENT RECORDING] Finished uploading chunk ${index}`);
-    });
+    uploadQueueRef.current = uploadQueueRef.current
+      .then(async () => {
+        console.log(`[STUDENT RECORDING] Starting upload for chunk ${index}`);
+        await mainApi.uploadRecordingChunk({
+          sessionId,
+          examId,
+          studentId,
+          index,
+          chunk,
+          deviceInfo,
+        });
+        console.log(`[STUDENT RECORDING] Finished uploading chunk ${index}`);
 
-    uploadQueueRef.current = uploadQueueRef.current.catch((err) => {
-      console.error(`[STUDENT RECORDING] uploadQueueRef error on chunk ${index}:`, err);
-      setError("Chunk upload failed. Please check network and retry.");
-    });
+        if (index === 0) {
+          setSuccessMessage("Recording started successfully! The system is receiving your video.");
+          setTimeout(() => setSuccessMessage(""), 5000);
+        }
+      })
+      .catch((err) => {
+        console.error(`[STUDENT RECORDING] uploadQueueRef error on chunk ${index}:`, err);
+        if (index === 0) {
+          abortRecording("Failed to connect to the backend. The exam could not be started.");
+        } else {
+          setError("Chunk upload failed. Please check network and retry.");
+        }
+      });
   };
 
   const scheduleSegmentStop = (recorder: MediaRecorder, segmentMs: number) => {
@@ -331,7 +373,7 @@ function StudentRecordPageContent() {
         segmentStopTimerRef.current = null;
       }
       if (isRecordingRef.current && !isFinalizingRef.current) {
-        startSegmentRecorder(stream, mimeType, sessionId, studentId, segmentMs);
+        startSegmentRecorder(stream, mimeType, sessionId, studentId, 4000);
       }
     };
 
@@ -408,7 +450,7 @@ function StudentRecordPageContent() {
         };
       });
 
-      startSegmentRecorder(stream, mimeType, sessionId, metadata.id as string, 4000);
+      startSegmentRecorder(stream, mimeType, sessionId, metadata.id as string, 1000);
     } catch {
       // setError("Screen recording permission denied or not available.");
       setIsRecording(false);
@@ -511,6 +553,11 @@ function StudentRecordPageContent() {
         {isRecording && (
           <div className="message-bar">
             Your screen is being recorded. Please do not close this tab.
+          </div>
+        )}
+        {successMessage && (
+          <div className="message-bar" style={{ backgroundColor: "#2e7d32", color: "#fff", marginTop: "1rem" }}>
+            {successMessage}
           </div>
         )}
         {!isRecording && showWarning && (
