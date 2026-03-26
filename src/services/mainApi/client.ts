@@ -987,22 +987,42 @@ export const mainApi = {
     }
 
     const metadata = getUserMetadata();
-    const created = await fetchServer<BackendExamResponse>({
-      baseUrl: mainApiBaseUrl,
-      path: "/exams",
-      method: "POST",
-      body: {
-        courseId,
-        title: payload.title,
-        description: payload.description,
-        professorId: metadata?.id || "",
-        examFileUrl: "",
-        durationMinutes: payload.durationMinutes,
-        startAvailableAt: payload.startAvailableAt,
-        endAvailableAt: payload.endAvailableAt,
-        recordingRequired: true,
-      },
-    });
+    const hasFile = Boolean(payload.examFile);
+    const created = hasFile
+      ? await fetchServer<BackendExamResponse>({
+          baseUrl: mainApiBaseUrl,
+          path: "/exams",
+          method: "POST",
+          body: (() => {
+            const formData = new FormData();
+            formData.append("courseId", courseId);
+            formData.append("title", payload.title);
+            formData.append("description", payload.description);
+            formData.append("professorId", metadata?.id || "");
+            formData.append("durationMinutes", String(payload.durationMinutes));
+            formData.append("startAvailableAt", payload.startAvailableAt);
+            formData.append("endAvailableAt", payload.endAvailableAt);
+            formData.append("recordingRequired", "true");
+            formData.append("examFileUrl", payload.examFile as File);
+            return formData;
+          })(),
+        })
+      : await fetchServer<BackendExamResponse>({
+          baseUrl: mainApiBaseUrl,
+          path: "/exams",
+          method: "POST",
+          body: {
+            courseId,
+            title: payload.title,
+            description: payload.description,
+            professorId: metadata?.id || "",
+            examFileUrl: "",
+            durationMinutes: payload.durationMinutes,
+            startAvailableAt: payload.startAvailableAt,
+            endAvailableAt: payload.endAvailableAt,
+            recordingRequired: true,
+          },
+        });
 
     return {
       id: created.id,

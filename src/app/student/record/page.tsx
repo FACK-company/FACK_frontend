@@ -10,6 +10,16 @@ import styles from "./page.module.css";
 
 const DEFAULT_USERNAME = "student_name";
 
+function getPdfDisplayName(fileUrl?: string): string {
+  if (!fileUrl) return "Exam PDF";
+  const rawName = fileUrl.split("/").pop() || "Exam PDF";
+  try {
+    return decodeURIComponent(rawName);
+  } catch {
+    return rawName;
+  }
+}
+
 function parseBeginEnd(timeWindow: string): { beginTime: string; endTime: string } {
   const match = timeWindow.match(
     /^([A-Za-z]{3})\s+(\d{1,2}),\s*(\d{1,2}:\d{2})\s*[-–]\s*(\d{1,2}:\d{2})$/
@@ -556,6 +566,41 @@ function StudentRecordPageContent() {
                   <div className="v">{exam.title}</div>
                 </div>
               </div>
+
+              {isRecording && exam.examFileUrl ? (
+                <div className={styles.pdfSection}>
+                  <div className={styles.pdfTagRow}>
+                    <span className={styles.pdfTag}>PDF attached</span>
+                    <span className={styles.pdfFileName}>{getPdfDisplayName(exam.examFileUrl)}</span>
+                  </div>
+                  <object
+                    className={styles.pdfPreview}
+                    data={exam.examFileUrl}
+                    type="application/pdf"
+                    aria-label={`${exam.title} PDF preview`}
+                  >
+                    <div className={styles.pdfFallback}>
+                      <div>
+                        PDF preview is unavailable in this browser.
+                        <div className={styles.pdfFallbackAction}>
+                          <a
+                            href={exam.examFileUrl}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="primary-btn"
+                          >
+                            Open PDF
+                          </a>
+                        </div>
+                      </div>
+                    </div>
+                  </object>
+                </div>
+              ) : !isRecording ? null : (
+                <div className={styles.pdfFallback}>
+                  No exam PDF is attached for this exam.
+                </div>
+              )}
             </section>
 
             <section className="panel right">

@@ -294,6 +294,10 @@ export default function ProfCourseClient({
       setError("Please fill exam title.");
       return;
     }
+    if (payload.examFile && payload.examFile.type !== "application/pdf") {
+      setError("Exam file must be a PDF.");
+      return;
+    }
     if (Number.isNaN(payload.durationMinutes) || payload.durationMinutes <= 0) {
       setError("Duration must be greater than 0.");
       return;
@@ -578,6 +582,19 @@ export default function ProfCourseClient({
                     setExamForm((p) => ({ ...p, description: e.target.value }))
                   }
                   placeholder="Exam description"
+                />
+              </label>
+              <label className={`${styles.field} ${styles.spanAll}`}>
+                <span>Exam PDF</span>
+                <input
+                  type="file"
+                  accept="application/pdf,.pdf"
+                  onChange={(e) =>
+                    setExamForm((p) => ({
+                      ...p,
+                      examFile: e.target.files?.[0] || null,
+                    }))
+                  }
                 />
               </label>
             </div>

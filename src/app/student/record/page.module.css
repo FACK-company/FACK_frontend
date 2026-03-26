@@ -149,6 +149,43 @@
   background:#fff;
 }
 
+.pdfSection{
+  margin-top:18px;
+  display:flex;
+  flex-direction:column;
+  gap:12px;
+}
+
+.pdfTagRow{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  flex-wrap:wrap;
+}
+
+.pdfTag{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  min-height:28px;
+  padding:4px 10px;
+  border-radius:999px;
+  background:rgba(0,25,110,.08);
+  border:1px solid rgba(0,25,110,.14);
+  color:#00196e;
+  font-size:12px;
+  font-weight:800;
+  text-transform:uppercase;
+  letter-spacing:.04em;
+}
+
+.pdfFileName{
+  color:rgba(0,25,110,.78);
+  font-size:13px;
+  font-weight:700;
+  overflow-wrap:anywhere;
+}
+
 .pdfFallback{
   min-height:320px;
   border-radius:4px;
@@ -161,6 +198,12 @@
   color:rgba(0,25,110,.7);
   font-weight:700;
   padding:16px;
+}
+
+.pdfFallbackAction{
+  margin-top:12px;
+  display:flex;
+  justify-content:center;
 }
 
 .placeholder,
