@@ -140,6 +140,7 @@ function StudentRecordPageContent() {
   const [recordingSessionId, setRecordingSessionId] = useState<string | null>(null);
   const [nowMs, setNowMs] = useState(Date.now());
   const [successMessage, setSuccessMessage] = useState("");
+  const [isBrowserSupported, setIsBrowserSupported] = useState(true);
 
   const mediaStreamRef = useRef<MediaStream | null>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -257,6 +258,15 @@ function StudentRecordPageContent() {
       setNowMs(Date.now());
     }, 1000);
     return () => clearInterval(timer);
+  }, []);
+
+  useEffect(() => {
+    if (typeof navigator !== "undefined") {
+      const ua = navigator.userAgent.toLowerCase();
+      const isEdge = ua.includes("edg/") || ua.includes("edge/");
+      const isChrome = ua.includes("chrome") && !ua.includes("opr/");
+      setIsBrowserSupported(isChrome || isEdge);
+    }
   }, []);
 
   const timerText = useMemo(() => {
@@ -382,6 +392,10 @@ function StudentRecordPageContent() {
   };
 
   const startRecording = async () => {
+    if (!isBrowserSupported) {
+      setError("Only Google Chrome and Microsoft Edge are supported for recording.");
+      return;
+    }
     const metadata = getUserMetadata();
     console.log("Starting recording with user metadata:", metadata);
     if (!metadata?.id) {
@@ -611,15 +625,17 @@ function StudentRecordPageContent() {
                   <button
                     className="primary-btn"
                     type="button"
-                    disabled={isPermissionPending || !startGate.canStart}
+                    disabled={isPermissionPending || !startGate.canStart || !isBrowserSupported}
                     onClick={startRecording}
                   >
                     {isPermissionPending ? "Waiting for permission..." : "Start Recording & Exam"}
                   </button>
                   <div className={`warning ${styles.warningCentered}`}>
-                    {startGate.canStart
-                      ? "Screen recording permission is required to start the exam."
-                      : (startGate.message || "Exam cannot be started right now.")}
+                    {!isBrowserSupported
+                      ? "Only Google Chrome and Microsoft Edge are supported for recording."
+                      : startGate.canStart
+                        ? "Screen recording permission is required to start the exam."
+                        : (startGate.message || "Exam cannot be started right now.")}
                   </div>
                 </div>
               )}
