@@ -476,6 +476,15 @@ function formatTimeWindow(start?: string, end?: string): string {
   return `${s.monthDay}, ${s.time}-${e.time}`;
 }
 
+function normalizeApiAssetUrl(url?: string): string {
+  if (!url) return "";
+  if (/^https?:\/\//i.test(url)) return url;
+  if (url.startsWith("/")) {
+    return `${mainApiBaseUrl}${url}`;
+  }
+  return `${mainApiBaseUrl}/${url}`;
+}
+
 function toStudentExamStatus(start?: string, end?: string): StudentExamSummary["status"] {
   if (!start || !end) return "Not started";
   const now = Date.now();
@@ -516,6 +525,11 @@ function buildPlaceholderExamDetails(courseId: string, examId: string): Professo
     missingRecordings,
     sessions,
   };
+}
+
+function buildDownloadUrl(url: string): string {
+  if (!url) return "";
+  return url.includes("?") ? `${url}&download=true` : `${url}?download=true`;
 }
 
 export const mainApi = {
@@ -783,7 +797,7 @@ export const mainApi = {
 
       return {
         ...summary,
-        description:
+      description:
           "Exam details are running on placeholder mode until backend APIs are connected.",
         examFileUrl: "/files/CS201_Spring_2026_HW2.pdf",
       };
@@ -805,7 +819,9 @@ export const mainApi = {
       timeWindow: formatTimeWindow(exam.startAvailableAt, exam.endAvailableAt),
       durationMinutes: exam.durationMinutes || 0,
       description: exam.description || "",
-      examFileUrl: exam.examFileUrl || "/files/CS201_Spring_2026_HW2.pdf",
+      examFileUrl: normalizeApiAssetUrl(
+        exam.examFileUrl || "/files/CS201_Spring_2026_HW2.pdf"
+      ),
       startAvailableAt: exam.startAvailableAt,
       endAvailableAt: exam.endAvailableAt,
     };
@@ -989,22 +1005,42 @@ export const mainApi = {
     }
 
     const metadata = getUserMetadata();
-    const created = await fetchServer<BackendExamResponse>({
-      baseUrl: mainApiBaseUrl,
-      path: "/exams",
-      method: "POST",
-      body: {
-        courseId,
-        title: payload.title,
-        description: payload.description,
-        professorId: metadata?.id || "",
-        examFileUrl: "",
-        durationMinutes: payload.durationMinutes,
-        startAvailableAt: payload.startAvailableAt,
-        endAvailableAt: payload.endAvailableAt,
-        recordingRequired: true,
-      },
-    });
+    const hasFile = Boolean(payload.examFile);
+    const created = hasFile
+      ? await fetchServer<BackendExamResponse>({
+          baseUrl: mainApiBaseUrl,
+          path: "/exams",
+          method: "POST",
+          body: (() => {
+            const formData = new FormData();
+            formData.append("courseId", courseId);
+            formData.append("title", payload.title);
+            formData.append("description", payload.description);
+            formData.append("professorId", metadata?.id || "");
+            formData.append("durationMinutes", String(payload.durationMinutes));
+            formData.append("startAvailableAt", payload.startAvailableAt);
+            formData.append("endAvailableAt", payload.endAvailableAt);
+            formData.append("recordingRequired", "true");
+            formData.append("examFile", payload.examFile as File);
+            return formData;
+          })(),
+        })
+      : await fetchServer<BackendExamResponse>({
+          baseUrl: mainApiBaseUrl,
+          path: "/exams",
+          method: "POST",
+          body: {
+            courseId,
+            title: payload.title,
+            description: payload.description,
+            professorId: metadata?.id || "",
+            examFileUrl: "",
+            durationMinutes: payload.durationMinutes,
+            startAvailableAt: payload.startAvailableAt,
+            endAvailableAt: payload.endAvailableAt,
+            recordingRequired: true,
+          },
+        });
 
     return {
       id: created.id,
@@ -1034,7 +1070,7 @@ export const mainApi = {
       formData.append("durationMinutes", String(payload.durationMinutes));
       formData.append("startAvailableAt", payload.startAvailableAt);
       formData.append("endAvailableAt", payload.endAvailableAt);
-      formData.append("examFileUrl", payload.examFile as File);
+      formData.append("examFile", payload.examFile as File);
       console.log('form data entries:');
       formData.forEach((value, key) => {
         console.log(`  ${key}:`, value instanceof File ? value.name : value);
@@ -1079,11 +1115,15 @@ export const mainApi = {
       return buildPlaceholderExamDetails(courseId, examId);
     }
 
-    return fetchServer<ProfessorExamDetailsResponse>({
+    const details = await fetchServer<ProfessorExamDetailsResponse>({
       baseUrl: mainApiBaseUrl,
       path: `/exams/${examId}`,
       method: "GET",
     });
+    return {
+      ...details,
+      examFileUrl: normalizeApiAssetUrl((details as any).examFileUrl || ""),
+    } as ProfessorExamDetailsResponse;
   },
 
   async getRecordingDetail(
@@ -1190,6 +1230,10 @@ export const mainApi = {
 
   getSessionRecordingUrl(sessionId: string): string {
     return `${mainApiBaseUrl}/recordings/stream/${sessionId}`;
+  },
+
+  getExamPdfDownloadUrl(url: string): string {
+    return buildDownloadUrl(url);
   },
 
   async addRecordingComment(

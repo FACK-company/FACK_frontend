@@ -120,6 +120,11 @@ function evaluateStartGate(exam: StudentExamDetailResponse | null, nowMs: number
   };
 }
 
+function buildDownloadUrl(url?: string): string {
+  if (!url) return "";
+  return url.includes("?") ? `${url}&download=true` : `${url}?download=true`;
+}
+
 function StudentRecordPageContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -603,6 +608,18 @@ function StudentRecordPageContent() {
                   <div className="v">{exam.title}</div>
                 </div>
               </div>
+              {isRecording && exam.examFileUrl && (
+                <div className={styles.pdfActionRow}>
+                  <a
+                    href={buildDownloadUrl(exam.examFileUrl)}
+                    target="_blank"
+                    rel="noreferrer"
+                    className={`primary-btn ${styles.downloadPdfBtn}`}
+                  >
+                    Download PDF
+                  </a>
+                </div>
+              )}
             </section>
 
             <section className="panel right">
