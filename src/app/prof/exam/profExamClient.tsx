@@ -257,6 +257,10 @@ export default function ProfExamClient({
       setError("Title is required.");
       return;
     }
+    if (editForm.examFile && editForm.examFile.type !== "application/pdf") {
+      setError("Exam file must be a PDF.");
+      return;
+    }
     if (!editForm.startAvailableAt || !editForm.endAvailableAt) {
       setError("Start and end availability are required.");
       return;
@@ -466,6 +470,44 @@ export default function ProfExamClient({
                       />
                     ) : (
                       localDetails.description || "—"
+                    )}
+                  </div>
+                </div>
+                <div className={`table-row ${styles.examTableRow}`}>
+                  <div className="strong">Exam PDF</div>
+                  <div>
+                    {isEditing ? (
+                      <div className={styles.fileFieldWrap}>
+                        <input
+                          className={styles.inputField}
+                          type="file"
+                          accept="application/pdf,.pdf"
+                          onChange={(event) =>
+                            setEditForm((prev) => ({
+                              ...prev,
+                              examFile: event.target.files?.[0] || null,
+                            }))
+                          }
+                        />
+                        <div className={styles.fileHint}>
+                          {editForm.examFile
+                            ? `Selected: ${editForm.examFile.name}`
+                            : localDetails.examFileUrl
+                              ? "Leave empty to keep current PDF."
+                              : "No PDF uploaded yet."}
+                        </div>
+                      </div>
+                    ) : localDetails.examFileUrl ? (
+                      <a
+                        href={localDetails.examFileUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        className={styles.fileLink}
+                      >
+                        View current PDF
+                      </a>
+                    ) : (
+                      "—"
                     )}
                   </div>
                 </div>
