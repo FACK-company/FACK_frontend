@@ -130,11 +130,6 @@ function evaluateStartGate(exam: StudentExamDetailResponse | null, nowMs: number
   };
 }
 
-function buildDownloadUrl(url?: string): string {
-  if (!url) return "";
-  return url.includes("?") ? `${url}&download=true` : `${url}?download=true`;
-}
-
 function StudentRecordPageContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -152,6 +147,7 @@ function StudentRecordPageContent() {
   const [showStopModal, setShowStopModal] = useState(false);
   const [showWarning, setShowWarning] = useState(true);
   const [isFinalizing, setIsFinalizing] = useState(false);
+  const [isDownloadingPdf, setIsDownloadingPdf] = useState(false);
   const [recordingSessionId, setRecordingSessionId] = useState<string | null>(null);
   const [nowMs, setNowMs] = useState(Date.now());
   const [successMessage, setSuccessMessage] = useState("");
@@ -544,6 +540,27 @@ function StudentRecordPageContent() {
   // Keep the ref in sync with the latest stopRecorderAndFinalize
   stopRecorderAndFinalizeRef.current = stopRecorderAndFinalize;
 
+  const handleDownloadPdf = async () => {
+    if (!exam?.examFileUrl || isDownloadingPdf) return;
+
+    setIsDownloadingPdf(true);
+    try {
+      const { blob, fileName } = await mainApi.downloadExamPdf(exam.examFileUrl);
+      const objectUrl = window.URL.createObjectURL(blob);
+      const anchor = document.createElement("a");
+      anchor.href = objectUrl;
+      anchor.download = fileName;
+      document.body.appendChild(anchor);
+      anchor.click();
+      anchor.remove();
+      window.URL.revokeObjectURL(objectUrl);
+    } catch {
+      setError("Unable to download the exam PDF right now.");
+    } finally {
+      setIsDownloadingPdf(false);
+    }
+  };
+
   return (
     <div className="page bg-record">
       {!isRecording && <StudentNav username={username} />}
@@ -626,14 +643,14 @@ function StudentRecordPageContent() {
                     <span className={styles.pdfFileName}>{getPdfDisplayName(exam.examFileUrl)}</span>
                   </div>
                   <div className={styles.pdfActionRow}>
-                    <a
-                      href={buildDownloadUrl(exam.examFileUrl)}
-                      target="_blank"
-                      rel="noreferrer"
+                    <button
+                      type="button"
+                      onClick={handleDownloadPdf}
+                      disabled={isDownloadingPdf}
                       className={`primary-btn ${styles.downloadPdfBtn}`}
                     >
-                      Download PDF
-                    </a>
+                      {isDownloadingPdf ? "Downloading..." : "Download PDF"}
+                    </button>
                   </div>
                 </div>
               ) : !isRecording ? null : (
