@@ -116,6 +116,16 @@
   overflow-wrap:anywhere;
 }
 
+.pdfActionRow{
+  margin-top:18px;
+  display:flex;
+  justify-content:flex-end;
+}
+
+.downloadPdfBtn{
+  min-width:150px;
+}
+
 .topbarCell{
   min-width:0;
   display:flex;

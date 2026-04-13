@@ -117,6 +117,9 @@ export default function ProfExamClient({
   const [examSessions, setExamSessions] = useState<ExamSession[]>([]);
   const [recordingsLoading, setRecordingsLoading] = useState(true);
   const [recordingsError, setRecordingsError] = useState("");
+  const [pingNotice, setPingNotice] = useState("");
+  const [pingAllLoading, setPingAllLoading] = useState(false);
+  const [pingingStudentId, setPingingStudentId] = useState<string | null>(null);
   const [localDetails, setLocalDetails] = useState<ProfExamDetails>(DEFAULT_EXAM_DETAILS);
   const [isLoadingDetails, setIsLoadingDetails] = useState(true);
   const [editForm, setEditForm] = useState<AddProfessorExamRequest>({
@@ -291,6 +294,33 @@ export default function ProfExamClient({
       setError("Unable to save changes.");
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  const handlePingAll = async () => {
+    setPingNotice("");
+    setPingAllLoading(true);
+    try {
+      const result = await mainApi.pingAllStudents();
+      setPingNotice(`Pinged ${result.pingedCount} active students.`);
+    } catch {
+      setPingNotice("Unable to ping all students.");
+    } finally {
+      setPingAllLoading(false);
+    }
+  };
+
+  const handlePingStudent = async (studentId: string, studentName?: string) => {
+    if (!studentId) return;
+    setPingNotice("");
+    setPingingStudentId(studentId);
+    try {
+      await mainApi.pingStudent(studentId);
+      setPingNotice(`Ping sent to ${studentName || "student"}.`);
+    } catch {
+      setPingNotice("Unable to ping that student (not active).");
+    } finally {
+      setPingingStudentId(null);
     }
   };
 
@@ -483,8 +513,21 @@ export default function ProfExamClient({
                 </div>
               </div>
 
-              <div className={styles.sectionTitle}>Exam Sessions</div>
-              <div className={`table table-7 ${styles.recordingTable}`}>
+              <div className={styles.sessionHeader}>
+                <div className={styles.sectionTitle}>Exam Sessions</div>
+                <div className={styles.pingActions}>
+                  <button
+                    className={`primary-btn ${styles.pingAllBtn}`}
+                    type="button"
+                    onClick={handlePingAll}
+                    disabled={pingAllLoading}
+                  >
+                    {pingAllLoading ? "Pinging..." : "Ping All"}
+                  </button>
+                </div>
+              </div>
+              {pingNotice && <div className={styles.pingNotice}>{pingNotice}</div>}
+              <div className={`table table-8 ${styles.recordingTable}`}>
                 <div className={`table-head ${styles.recordingTableHead}`}>
                   <div>Student</div>
                   <div>Email</div>
@@ -492,6 +535,7 @@ export default function ProfExamClient({
                   <div>Duration</div>
                   <div>Started At</div>
                   <div>Ended At</div>
+                  <div>Ping</div>
                   <div></div>
                 </div>
                 {recordingsLoading && (
@@ -527,6 +571,7 @@ export default function ProfExamClient({
                     return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
                   };
 
+                  const targetStudentId = session.student?.id || session.studentId;
                   return (
                     <div
                       className={`table-row ${styles.recordingTableRow}`}
@@ -547,9 +592,19 @@ export default function ProfExamClient({
                       <div>{duration}</div>
                       <div>{formatTime(session?.startTime)}</div>
                       <div>{formatTime(session?.endTime)}</div>
+                      <div>
+                        <button
+                          className={`primary-btn ${styles.pingBtn}`}
+                          type="button"
+                          onClick={() => handlePingStudent(targetStudentId, session.student?.name)}
+                          disabled={!targetStudentId || pingingStudentId === targetStudentId}
+                        >
+                          {pingingStudentId === targetStudentId ? "Pinging..." : "Ping"}
+                        </button>
+                      </div>
                       {canViewSession ? (
                         <a
-                          className="primary-btn"
+                          className={`primary-btn ${styles.viewBtn}`}
                           href={`/prof/recordings/view?courseId=${courseId}&examId=${examId}&sessionId=${session.id}`}
                         >
                           {session.status === "running" ? "View live" : "View"}

@@ -137,6 +137,14 @@ export default function LoginPage() {
                   }}
                 />
                 <div className="error-text">{passwordError}</div>
+                <div style={{ textAlign: "right", marginTop: "4px" }}>
+                  <a
+                    href="/forgot-password"
+                    style={{ fontSize: "13px", opacity: 0.7, textDecoration: "underline" }}
+                  >
+                    Forgot password?
+                  </a>
+                </div>
               </div>
 
               <button
