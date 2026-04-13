@@ -122,6 +122,7 @@ export default function ProfExamClient({
   const [pingingStudentId, setPingingStudentId] = useState<string | null>(null);
   const [localDetails, setLocalDetails] = useState<ProfExamDetails>(DEFAULT_EXAM_DETAILS);
   const [isLoadingDetails, setIsLoadingDetails] = useState(true);
+  const [isOpeningPdf, setIsOpeningPdf] = useState(false);
   const [editForm, setEditForm] = useState<AddProfessorExamRequest>({
     title: "",
     description: "",
@@ -324,8 +325,26 @@ export default function ProfExamClient({
     }
   };
 
-  return (
-    <div className={`page ${styles.pageBg}`}>
+  const handleOpenPdf = async () => {
+    if (!localDetails.examFileUrl || isOpeningPdf) return;
+
+    setIsOpeningPdf(true);
+    setError("");
+    try {
+      const { blob } = await mainApi.downloadExamPdf(localDetails.examFileUrl);
+      const objectUrl = window.URL.createObjectURL(blob);
+      window.open(objectUrl, "_blank", "noopener,noreferrer");
+      window.setTimeout(() => {
+        window.URL.revokeObjectURL(objectUrl);
+      }, 60000);
+    } catch {
+      setError("Unable to open the exam PDF.");
+    } finally {
+      setIsOpeningPdf(false);
+    }
+  };
+
+  return (    <div className={`page ${styles.pageBg}`}>
       <ProfNav username={username} />
 
       <main className="main">
@@ -498,14 +517,14 @@ export default function ProfExamClient({
                         </div>
                       </div>
                     ) : localDetails.examFileUrl ? (
-                      <a
-                        href={localDetails.examFileUrl}
-                        target="_blank"
-                        rel="noreferrer"
+                      <button
+                        type="button"
                         className={styles.fileLink}
+                        onClick={handleOpenPdf}
+                        disabled={isOpeningPdf}
                       >
-                        View current PDF
-                      </a>
+                        {isOpeningPdf ? "Opening PDF..." : "View current PDF"}
+                      </button>
                     ) : (
                       "—"
                     )}

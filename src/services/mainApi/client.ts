@@ -34,6 +34,7 @@ import {
   clearAccessToken,
   clearUserMetadata,
   fetchServer,
+  getAccessToken,
   getUserMetadata,
   refreshAccessToken,
   setAccessToken,
@@ -485,6 +486,24 @@ function normalizeApiAssetUrl(url?: string): string {
   return `${mainApiBaseUrl}/${url}`;
 }
 
+function buildDownloadUrl(url: string): string {
+  return url.includes("?") ? `${url}&download=true` : `${url}?download=true`;
+}
+
+function getFileNameFromDisposition(header?: string | null): string | null {
+  if (!header) return null;
+  const utf8Match = header.match(/filename\*=UTF-8''([^;]+)/i);
+  if (utf8Match?.[1]) {
+    try {
+      return decodeURIComponent(utf8Match[1]);
+    } catch {
+      return utf8Match[1];
+    }
+  }
+  const plainMatch = header.match(/filename="?([^"]+)"?/i);
+  return plainMatch?.[1] ?? null;
+}
+
 function toStudentExamStatus(start?: string, end?: string): StudentExamSummary["status"] {
   if (!start || !end) return "Not started";
   const now = Date.now();
@@ -525,11 +544,6 @@ function buildPlaceholderExamDetails(courseId: string, examId: string): Professo
     missingRecordings,
     sessions,
   };
-}
-
-function buildDownloadUrl(url: string): string {
-  if (!url) return "";
-  return url.includes("?") ? `${url}&download=true` : `${url}?download=true`;
 }
 
 export const mainApi = {
@@ -825,6 +839,64 @@ export const mainApi = {
       startAvailableAt: exam.startAvailableAt,
       endAvailableAt: exam.endAvailableAt,
     };
+  },
+
+  async downloadExamPdf(
+    fileUrl: string
+  ): Promise<{ blob: Blob; fileName: string }> {
+    const normalizedUrl = normalizeApiAssetUrl(fileUrl);
+    const downloadUrl = buildDownloadUrl(normalizedUrl);
+    let accessToken = getAccessToken();
+
+    if (!accessToken) {
+      const refreshed = await refreshAccessToken(mainApiBaseUrl, Number(process.env.NEXT_PUBLIC_API_TIMEOUT ?? 30000));
+      accessToken = refreshed ?? null;
+    }
+
+    const makeRequest = async (token: string | null) => {
+      const headers = new Headers();
+      if (token) {
+        headers.set("Authorization", `Bearer ${token}`);
+      }
+
+      return fetch(downloadUrl, {
+        method: "GET",
+        headers,
+        credentials: "include",
+      });
+    };
+
+    let response = await makeRequest(accessToken);
+
+    if ((response.status === 401 || response.status === 403)) {
+      const refreshed = await refreshAccessToken(
+        mainApiBaseUrl,
+        Number(process.env.NEXT_PUBLIC_API_TIMEOUT ?? 30000)
+      );
+      if (!refreshed) {
+        clearAccessToken();
+        clearUserMetadata();
+        throw new Error("HTTP 401");
+      }
+      response = await makeRequest(refreshed);
+    }
+
+    if (!response.ok) {
+      if (response.status === 401 || response.status === 403) {
+        clearAccessToken();
+        clearUserMetadata();
+        throw new Error("HTTP 401");
+      }
+      throw new Error(`HTTP ${response.status}`);
+    }
+
+    const blob = await response.blob();
+    const fileName =
+      getFileNameFromDisposition(response.headers.get("content-disposition")) ||
+      normalizedUrl.split("/").pop() ||
+      "exam.pdf";
+
+    return { blob, fileName };
   },
 
   async getProfessorCourses(prof_id: string): Promise<ProfessorCourse[]> {
