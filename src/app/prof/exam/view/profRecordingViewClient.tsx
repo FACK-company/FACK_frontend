@@ -202,7 +202,7 @@ export default function ProfRecordingViewClient({
   };
 
   const calculateDuration = () => {
-    if (!sessionData || !sessionData.endTime) return "In progress";
+    if (!sessionData || !sessionData.endTime) return "Active";
     const durationSec = Math.round(
       (new Date(sessionData.endTime).getTime() - new Date(sessionData.startTime).getTime()) / 1000
     );
@@ -237,10 +237,6 @@ export default function ProfRecordingViewClient({
               {sessionData && (
                 <section className={`detail-card ${styles.detailCard}`}>
                   <div className="row">
-                    <div>
-                      <div className="label">Exam ID</div>
-                      <div className="value">{sessionData.examId}</div>
-                    </div>
                     <span
                       className={`badge ${sessionData.status === "submitted" ? "submitted" : "not-started"}`}
                     >
@@ -258,7 +254,7 @@ export default function ProfRecordingViewClient({
                     </div>
                     <div>
                       <div className="label">End time</div>
-                      <div className="value">{sessionData.endTime ? formatDateTime(sessionData.endTime) : "In progress"}</div>
+                      <div className="value">{sessionData.endTime ? formatDateTime(sessionData.endTime) : "Active"}</div>
                     </div>
                     <div>
                       <div className="label">Duration</div>

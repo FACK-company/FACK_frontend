@@ -34,6 +34,13 @@
   gap:12px;
 }
 
+.metaActions{
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+  align-items:stretch;
+}
+
 .metaGrid{
   flex:1;
   display:grid;
@@ -106,6 +113,25 @@
   color:var(--navy);
   font-weight:700;
   cursor:pointer;
+  text-decoration:none;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+}
+
+.secondaryActionBtn{
+  height:40px;
+  min-width:140px;
+  border-radius:4px;
+  border:1px solid rgba(0,25,110,.25);
+  background:#fff;
+  color:var(--navy);
+  font-weight:700;
+  cursor:pointer;
+  text-decoration:none;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
 }
 
 .addRow{

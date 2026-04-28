@@ -8,6 +8,11 @@ import LoadingState from "@/components/LoadingState";
 import styles from "./page.module.css";
 import type { StudentCourse, StudentExamSummary } from "@/types/api/main";
 
+function getExamStatusLabel(status: StudentExamSummary["status"]) {
+  if (status === "In progress") return "Active";
+  return status;
+}
+
 function StudentCoursePageContent() {
   const searchParams = useSearchParams();
   const courseId = useMemo(() => searchParams.get("courseId") || "CS207", [searchParams]);
@@ -68,6 +73,7 @@ function StudentCoursePageContent() {
             {!loading &&
               exams.map((exam) => {
                 const isEnded = exam.status === "Ended";
+                const statusLabel = getExamStatusLabel(exam.status);
                 return (
                   <article className={styles.examCard} key={exam.id}>
                     <div className={styles.examRow}>
@@ -85,7 +91,7 @@ function StudentCoursePageContent() {
                               : styles.notStarted
                           }`}
                       >
-                        {exam.status}
+                        {statusLabel}
                       </span>
                     </div>
                     <div className={styles.examGrid}>

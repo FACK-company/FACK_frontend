@@ -7,6 +7,26 @@
   margin:0 auto;
 }
 
+.pageHeadingBlock{
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+}
+
+.pageEyebrow{
+  font-size:12px;
+  font-weight:800;
+  letter-spacing:.08em;
+  text-transform:uppercase;
+  color:rgba(0,25,110,.62);
+}
+
+.pageTitle{
+  margin:0;
+  font-size:34px;
+  line-height:1.1;
+}
+
 .layoutRecording{
   padding-top:98px;
 }
@@ -45,6 +65,28 @@
   color:rgba(0,25,110,.8);
   font-weight:700;
   font-size:13px;
+}
+
+.policyCard{
+  display:flex;
+  align-items:flex-start;
+  gap:10px;
+  padding:14px;
+  border-radius:4px;
+  border:1px solid rgba(0,25,110,.14);
+  background:rgba(0,25,110,.04);
+  color:rgba(0,25,110,.86);
+  font-weight:700;
+}
+
+.policyCard input{
+  margin-top:3px;
+  flex:0 0 auto;
+}
+
+.policyCard a{
+  color:var(--navy);
+  text-decoration:underline;
 }
 
 .modalPrimaryBtn,
@@ -238,6 +280,10 @@
   .layout{
     max-width:100%;
     padding:18px;
+  }
+
+  .pageTitle{
+    font-size:28px;
   }
 
   .layoutRecording{

@@ -9,7 +9,6 @@ import type {
   AddProfessorExamRequest,
   ExamSession,
   ProfessorExamDetailsResponse,
-  ProfessorRecordingListItem,
 } from "@/types/api/main";
 
 type ProfExamDetails = {
@@ -93,6 +92,10 @@ function formatDateTime(value: string): string {
   return parsed.toLocaleString();
 }
 
+
+function getSessionStatusLabel(status?: string): string {
+  return status === "in_progress" ? "active" : status || "unknown";
+}
 
 function toDateTimeInput(value: string): string {
   if (!value) return "";
@@ -493,7 +496,7 @@ export default function ProfExamClient({
                   </div>
                 </div>
                 <div className={`table-row ${styles.examTableRow}`}>
-                  <div className="strong">Exam PDF</div>
+                  <div className="strong">Exam file</div>
                   <div>
                     {isEditing ? (
                       <div className={styles.fileFieldWrap}>
@@ -512,8 +515,8 @@ export default function ProfExamClient({
                           {editForm.examFile
                             ? `Selected: ${editForm.examFile.name}`
                             : localDetails.examFileUrl
-                              ? "Leave empty to keep current PDF."
-                              : "No PDF uploaded yet."}
+                              ? "Leave empty to keep current file."
+                              : "No file uploaded yet."}
                         </div>
                       </div>
                     ) : localDetails.examFileUrl ? (
@@ -523,7 +526,7 @@ export default function ProfExamClient({
                         onClick={handleOpenPdf}
                         disabled={isOpeningPdf}
                       >
-                        {isOpeningPdf ? "Opening PDF..." : "View current PDF"}
+                        {isOpeningPdf ? "Opening file..." : "View attached file"}
                       </button>
                     ) : (
                       "—"
@@ -574,7 +577,7 @@ export default function ProfExamClient({
                 )}
                 {!recordingsLoading && !recordingsError && examSessions.map((session) => {
                   const calculateDuration = () => {
-                    if (!session.endTime) return "In progress";
+                    if (!session.endTime) return "Active";
                     const durationSec = Math.round((new Date(session.endTime).getTime() - new Date(session.startTime).getTime()) / 1000);
                     if (durationSec < 60) return `${durationSec} sec`;
                     const durationMin = Math.round(durationSec / 60);
@@ -606,7 +609,7 @@ export default function ProfExamClient({
                             : "missing"
                           }`}
                       >
-                        {session.status}
+                        {getSessionStatusLabel(session.status)}
                       </div>
                       <div>{duration}</div>
                       <div>{formatTime(session?.startTime)}</div>
@@ -642,3 +645,4 @@ export default function ProfExamClient({
     </div>
   );
 }
+

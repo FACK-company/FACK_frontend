@@ -9,10 +9,12 @@ import type { StudentExamDetailResponse } from "@/types/api/main";
 import styles from "./page.module.css";
 
 const DEFAULT_USERNAME = "student_name";
+const RECORDING_POLICY_LABEL =
+  "I understand that my screen activity will be recorded during the exam and I agree to continue under the privacy policy.";
 
 function getPdfDisplayName(fileUrl?: string): string {
-  if (!fileUrl) return "Exam PDF";
-  const rawName = fileUrl.split("/").pop() || "Exam PDF";
+  if (!fileUrl) return "Exam file";
+  const rawName = fileUrl.split("/").pop() || "Exam file";
   try {
     return decodeURIComponent(rawName);
   } catch {
@@ -151,6 +153,7 @@ function StudentRecordPageContent() {
   const [recordingSessionId, setRecordingSessionId] = useState<string | null>(null);
   const [nowMs, setNowMs] = useState(Date.now());
   const [successMessage, setSuccessMessage] = useState("");
+  const [hasAcceptedPolicy, setHasAcceptedPolicy] = useState(false);
 
   const mediaStreamRef = useRef<MediaStream | null>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -400,6 +403,10 @@ function StudentRecordPageContent() {
       setError("Missing user metadata. Please sign in again.");
       return;
     }
+    if (!hasAcceptedPolicy) {
+      setError("Please accept the recording and privacy agreement before starting.");
+      return;
+    }
     console.log("Evaluating start gate with exam data:", exam);
     const gateNow = evaluateStartGate(exam, Date.now());
     if (!gateNow.canStart) {
@@ -582,6 +589,12 @@ function StudentRecordPageContent() {
       </header>
 
       <main className={`${styles.layout} ${isRecording ? styles.layoutRecording : ""}`}>
+        {!loading && exam && (
+          <div className={styles.pageHeadingBlock}>
+            <div className={styles.pageEyebrow}>Exam check-in</div>
+            <h1 className={styles.pageTitle}>{exam.title}</h1>
+          </div>
+        )}
         {isRecording && (
           <div className="message-bar">
             Your screen is being recorded. Please do not close this tab.
@@ -594,7 +607,7 @@ function StudentRecordPageContent() {
         )}
         {!isRecording && showWarning && (
           <div className={styles.topWarningNotice}>
-            Cannot begin exam without recording permission.
+            Allow screen recording to begin the exam.
           </div>
         )}
 
@@ -639,7 +652,7 @@ function StudentRecordPageContent() {
               {isRecording && exam.examFileUrl ? (
                 <div className={styles.pdfSection}>
                   <div className={styles.pdfTagRow}>
-                    <span className={styles.pdfTag}>PDF attached</span>
+                    <span className={styles.pdfTag}>Exam file ready</span>
                     <span className={styles.pdfFileName}>{getPdfDisplayName(exam.examFileUrl)}</span>
                   </div>
                   <div className={styles.pdfActionRow}>
@@ -661,19 +674,37 @@ function StudentRecordPageContent() {
             <section className="panel right">
               {!isRecording && (
                 <div className="actions">
+                  <label className={styles.policyCard}>
+                    <input
+                      type="checkbox"
+                      checked={hasAcceptedPolicy}
+                      onChange={(event) => setHasAcceptedPolicy(event.target.checked)}
+                    />
+                    <span>
+                      {RECORDING_POLICY_LABEL}{" "}
+                      <a href="/about" target="_blank" rel="noreferrer">
+                        Read policy
+                      </a>
+                    </span>
+                  </label>
                   <button
                     className="primary-btn"
                     type="button"
-                    disabled={isPermissionPending || !startGate.canStart}
+                    disabled={isPermissionPending || !startGate.canStart || !hasAcceptedPolicy}
                     onClick={startRecording}
                   >
                     {isPermissionPending ? "Waiting for permission..." : "Start Recording & Exam"}
                   </button>
                   <div className={`warning ${styles.warningCentered}`}>
                     {startGate.canStart
-                      ? "Screen recording permission is required to start the exam."
+                      ? "Grant recording permission and accept the policy to start the exam."
                       : (startGate.message || "Exam cannot be started right now.")}
                   </div>
+                  {isPermissionPending && (
+                    <p className={styles.permissionPendingText}>
+                      Please wait a moment while the browser asks for recording permission.
+                    </p>
+                  )}
                 </div>
               )}
             </section>
